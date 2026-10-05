@@ -1,8 +1,13 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import MaterialIcon from '../MaterialIcon.vue'
 import type { AircraftInfo } from '../../services/aircraft/types'
 import { getAltitudeColor } from '../../services/aircraft/aircraftIcons'
+import {
+  flightInfoService,
+  type RouteInfo,
+  type AircraftDetails,
+} from '../../services/aircraft/flightInfoService'
 
 const props = defineProps<{
   aircraft: AircraftInfo | null
@@ -40,6 +45,45 @@ const flightLevel = computed(() => {
   if (!props.aircraft || props.aircraft.isGround) return 'GND'
   return `FL${Math.round(props.aircraft.altitude / 100)}`
 })
+
+// Instant 0ms Airline Recognition
+const airline = computed(() => {
+  return flightInfoService.getAirline(props.aircraft?.flight || '')
+})
+
+// Asynchronous Route & Aircraft Details Resolution
+const routeInfo = ref<RouteInfo | null>(null)
+const aircraftDetails = ref<AircraftDetails | null>(null)
+const isRouteLoading = ref(false)
+
+watch(
+  () => props.aircraft?.flight,
+  async (newFlight) => {
+    if (!newFlight) {
+      routeInfo.value = null
+      return
+    }
+    isRouteLoading.value = true
+    try {
+      routeInfo.value = await flightInfoService.getRoute(newFlight)
+    } finally {
+      isRouteLoading.value = false
+    }
+  },
+  { immediate: true }
+)
+
+watch(
+  () => props.aircraft?.hex,
+  async (newHex) => {
+    if (!newHex) {
+      aircraftDetails.value = null
+      return
+    }
+    aircraftDetails.value = await flightInfoService.getAircraftDetails(newHex)
+  },
+  { immediate: true }
+)
 </script>
 
 <template>
@@ -65,7 +109,7 @@ const flightLevel = computed(() => {
 
     <!-- Main Card Body -->
     <div
-      class="w-72 sm:w-80 rounded-2xl bg-slate-900/95 backdrop-blur-xl border border-sky-500/40 shadow-2xl shadow-sky-950/50 overflow-hidden text-slate-100 transition-all duration-150"
+      class="w-80 sm:w-88 rounded-2xl bg-slate-900/95 backdrop-blur-xl border border-sky-500/40 shadow-2xl shadow-sky-950/50 overflow-hidden text-slate-100 transition-all duration-150"
     >
       <!-- Header with dynamic altitude gradient & flight callsign -->
       <div
@@ -81,12 +125,21 @@ const flightLevel = computed(() => {
               <h3 class="font-extrabold text-base tracking-wider leading-none truncate">
                 {{ aircraft.flight || 'UNKNOWN' }}
               </h3>
+              <span
+                v-if="airline"
+                class="badge badge-xs bg-sky-400/25 text-sky-200 border-none font-medium shrink-0"
+              >
+                {{ airline.nameZh }}
+              </span>
               <span class="badge badge-xs bg-white/20 text-white font-mono border-none shrink-0">
                 {{ aircraft.hex.toUpperCase() }}
               </span>
             </div>
             <p class="text-[11px] text-white/80 mt-0.5 font-mono truncate">
-              {{ aircraft.model }} · {{ aircraft.registration }}
+              <span v-if="aircraftDetails?.fullType">{{ aircraftDetails.fullType }} · </span>
+              <span v-else>{{ aircraft.model }} · </span>
+              <span>{{ aircraft.registration }}</span>
+              <span v-if="airline" class="text-white/60"> ({{ airline.nameEn }})</span>
             </p>
           </div>
         </div>
@@ -98,6 +151,48 @@ const flightLevel = computed(() => {
         >
           <MaterialIcon name="close" :size="16" />
         </button>
+      </div>
+
+      <!-- Route Banner (Origin -> Destination) if resolved -->
+      <div v-if="routeInfo" class="px-3.5 py-2 bg-slate-800/80 border-b border-slate-700/60">
+        <div class="flex items-center justify-between">
+          <!-- Departure Airport -->
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center gap-1">
+              <span class="text-xs font-black font-mono text-sky-400 tracking-wider">
+                {{ routeInfo.origin.iata }}
+              </span>
+              <span class="text-[10px] text-slate-400 font-mono">({{ routeInfo.origin.icao }})</span>
+            </div>
+            <div class="text-[11px] text-slate-200 font-medium truncate" :title="routeInfo.origin.name">
+              {{ routeInfo.origin.city || routeInfo.origin.name }}
+            </div>
+          </div>
+
+          <!-- Middle Flight Arrow -->
+          <div class="px-2 flex flex-col items-center shrink-0">
+            <MaterialIcon name="flight_takeoff" :size="16" class="text-sky-400" />
+            <span class="text-[9px] font-mono text-slate-400">直飛</span>
+          </div>
+
+          <!-- Destination Airport -->
+          <div class="flex-1 min-w-0 text-right">
+            <div class="flex items-center justify-end gap-1">
+              <span class="text-[10px] text-slate-400 font-mono">({{ routeInfo.destination.icao }})</span>
+              <span class="text-xs font-black font-mono text-emerald-400 tracking-wider">
+                {{ routeInfo.destination.iata }}
+              </span>
+            </div>
+            <div class="text-[11px] text-slate-200 font-medium truncate" :title="routeInfo.destination.name">
+              {{ routeInfo.destination.city || routeInfo.destination.name }}
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- Route Loading Placeholder -->
+      <div v-else-if="isRouteLoading" class="px-3.5 py-1.5 bg-slate-800/50 border-b border-slate-700/40 text-[10px] text-slate-400 flex items-center gap-1.5 animate-pulse">
+        <MaterialIcon name="sync" :size="12" class="animate-spin text-sky-400" />
+        <span>正在查詢全球航線庫起迄站...</span>
       </div>
 
       <!-- Quick Telemetry Grid (2x2) -->

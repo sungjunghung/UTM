@@ -17,6 +17,26 @@ function adsbCachePlugin(): Plugin {
     name: 'adsb-cache-middleware',
     configureServer(server) {
       server.middlewares.use(async (req, res, next) => {
+        if (req.url && req.url.startsWith('/api/hexdb/')) {
+          const upstreamPath = req.url.replace(/^\/api\/hexdb/, '')
+          try {
+            const upstreamRes = await fetch(`https://hexdb.io/api/v1${upstreamPath}`, {
+              headers: {
+                'User-Agent': 'UTM-FlightRadar/1.0',
+                Accept: 'application/json',
+              },
+            })
+            const body = await upstreamRes.text()
+            res.setHeader('Content-Type', 'application/json')
+            res.setHeader('Cache-Control', 'public, max-age=86400')
+            res.end(body)
+          } catch (err: any) {
+            res.statusCode = 502
+            res.end(JSON.stringify({ error: err.message }))
+          }
+          return
+        }
+
         if (!req.url || !req.url.startsWith('/api/adsb/')) {
           return next()
         }

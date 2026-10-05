@@ -2,6 +2,7 @@
 import { ref, computed } from 'vue'
 import MaterialIcon from '../MaterialIcon.vue'
 import type { AircraftInfo } from '../../services/aircraft/types'
+import { flightInfoService } from '../../services/aircraft/flightInfoService'
 
 const props = defineProps<{
   aircraftList: AircraftInfo[]
@@ -24,13 +25,16 @@ const filteredList = computed(() => {
   const q = searchQuery.value.trim().toUpperCase()
   if (!q) return props.aircraftList.slice(0, 15)
   return props.aircraftList
-    .filter(
-      (ac) =>
+    .filter((ac) => {
+      const airline = flightInfoService.getAirline(ac.flight)
+      return (
         ac.flight.toUpperCase().includes(q) ||
         ac.model.toUpperCase().includes(q) ||
         ac.hex.toUpperCase().includes(q) ||
-        ac.registration.toUpperCase().includes(q)
-    )
+        ac.registration.toUpperCase().includes(q) ||
+        (airline && (airline.nameZh.includes(q) || airline.nameEn.toUpperCase().includes(q)))
+      )
+    })
     .slice(0, 20)
 })
 
@@ -149,7 +153,15 @@ const altitudeLegends = [
               :style="{ background: ac.isGround ? '#10b981' : '#3b82f6' }"
             ></span>
             <div>
-              <div class="font-bold font-mono leading-none">{{ ac.flight || ac.hex.toUpperCase() }}</div>
+              <div class="flex items-center gap-1.5">
+                <span class="font-bold font-mono leading-none">{{ ac.flight || ac.hex.toUpperCase() }}</span>
+                <span
+                  v-if="flightInfoService.getAirline(ac.flight)"
+                  class="badge badge-xs bg-sky-400/20 text-sky-400 border-none text-[9px] px-1"
+                >
+                  {{ flightInfoService.getAirline(ac.flight)!.nameZh }}
+                </span>
+              </div>
               <div class="text-[10px] opacity-70 mt-0.5">{{ ac.model }} · {{ ac.registration }}</div>
             </div>
           </div>
