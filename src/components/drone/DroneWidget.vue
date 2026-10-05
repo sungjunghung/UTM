@@ -46,10 +46,10 @@ const filteredList = computed(() => {
 </script>
 
 <template>
-  <div class="flex flex-col items-start gap-2 select-none">
+  <div class="flex flex-col items-start gap-1.5 select-none">
     <!-- Status Pill -->
     <div
-      class="flex items-center gap-2 p-1.5 pl-3 pr-2 rounded-2xl bg-base-100/90 backdrop-blur-xl border border-cyan-500/30 shadow-xl transition-all"
+      class="flex items-center gap-2 p-1 pl-2.5 pr-1.5 rounded-md bg-base-100/95 backdrop-blur-md border border-cyan-500/40 shadow-lg transition-all"
       :class="{ 'opacity-60': !showDrones }"
     >
       <!-- Drone Pulse Indicator (Cyan) -->
@@ -118,7 +118,7 @@ const filteredList = computed(() => {
 
       <!-- Action: Simulate Conflict Path (Interactive Testing) -->
       <button
-        class="btn btn-xs rounded-xl px-2 gap-1 font-medium transition-all"
+        class="btn btn-xs rounded-sm px-2 gap-1 font-medium transition-all"
         :class="
           isSimulatingConflict
             ? 'btn-error btn-outline animate-pulse text-xs'
@@ -144,21 +144,21 @@ const filteredList = computed(() => {
     <!-- Drone Search / Quick Jump Dropdown Popover -->
     <div
       v-if="isSearchOpen"
-      class="w-72 sm:w-84 rounded-2xl bg-base-100/95 backdrop-blur-xl border border-cyan-500/40 shadow-2xl p-3 space-y-2 animate-in fade-in zoom-in-95 duration-150 z-50"
+      class="w-72 sm:w-84 rounded-md bg-base-100/98 backdrop-blur-md border border-cyan-500/40 shadow-2xl p-2.5 space-y-2 animate-in fade-in duration-100 z-50"
     >
-      <div class="flex items-center justify-between pb-1.5 border-b border-base-300">
+      <div class="flex items-center justify-between pb-1 border-b border-base-300">
         <span class="text-xs font-bold flex items-center gap-1.5 text-cyan-400">
-          <MaterialIcon name="flight_takeoff" :size="16" />
+          <MaterialIcon name="flight_takeoff" :size="15" />
           空域即時無人機任務清單
         </span>
         <button class="btn btn-xs btn-circle btn-ghost" @click="isSearchOpen = false">
-          <MaterialIcon name="close" :size="14" />
+          <MaterialIcon name="close" :size="13" />
         </button>
       </div>
 
       <!-- Search Input -->
-      <label class="input input-xs input-bordered flex items-center gap-1.5 bg-base-200/50">
-        <MaterialIcon name="search" :size="14" class="text-base-content/50" />
+      <label class="input input-xs input-bordered rounded-sm flex items-center gap-1.5 bg-base-200/50">
+        <MaterialIcon name="search" :size="13" class="text-base-content/50" />
         <input
           v-model="searchQuery"
           type="text"
@@ -171,11 +171,11 @@ const filteredList = computed(() => {
       </label>
 
       <!-- Drones List -->
-      <div class="max-h-64 overflow-y-auto space-y-1.5 pr-1">
+      <div class="max-h-64 overflow-y-auto space-y-1 pr-1">
         <button
           v-for="d in filteredList"
           :key="d.id"
-          class="w-full flex items-center justify-between p-2 rounded-xl bg-base-200/50 hover:bg-cyan-950/40 hover:border-cyan-500/40 border border-transparent text-left text-xs transition-all cursor-pointer group"
+          class="w-full flex items-center justify-between p-1.5 rounded-sm bg-base-200/50 hover:bg-cyan-950/40 hover:border-cyan-500/40 border border-transparent text-left text-xs transition-all cursor-pointer group"
           @click="
             emit('selectDrone', d.id);
             isSearchOpen = false;
@@ -206,25 +206,25 @@ const filteredList = computed(() => {
     <!-- Collision Risk Alerts Popover -->
     <div
       v-if="isAlertsOpen"
-      class="w-80 sm:w-96 rounded-2xl bg-base-100/95 backdrop-blur-xl border border-warning/40 shadow-2xl p-3.5 space-y-2.5 animate-in fade-in zoom-in-95 duration-150 z-50"
+      class="w-80 sm:w-96 rounded-md bg-base-100/98 backdrop-blur-md border border-warning/40 shadow-2xl p-3 space-y-2 animate-in fade-in duration-100 z-50"
     >
-      <div class="flex items-center justify-between pb-1.5 border-b border-base-300">
+      <div class="flex items-center justify-between pb-1 border-b border-base-300">
         <span class="text-xs font-bold flex items-center gap-1.5 text-warning">
-          <MaterialIcon name="crisis_alert" :size="16" />
+          <MaterialIcon name="crisis_alert" :size="15" />
           UTM 空域衝突與 CPA 碰撞預警
         </span>
         <button class="btn btn-xs btn-circle btn-ghost" @click="isAlertsOpen = false">
-          <MaterialIcon name="close" :size="14" />
+          <MaterialIcon name="close" :size="13" />
         </button>
       </div>
 
       <!-- No alerts state -->
       <div
         v-if="!collisionRisks || collisionRisks.length === 0"
-        class="py-6 text-center text-xs text-base-content/60 space-y-2"
+        class="py-5 text-center text-xs text-base-content/60 space-y-1.5"
       >
-        <div class="w-10 h-10 mx-auto rounded-full bg-success/20 text-success flex items-center justify-center">
-          <MaterialIcon name="verified_user" :size="20" />
+        <div class="w-9 h-9 mx-auto rounded-full bg-success/20 text-success flex items-center justify-center">
+          <MaterialIcon name="verified_user" :size="18" />
         </div>
         <div>全空域無碰撞風險（綠燈安全）</div>
         <div class="text-[11px] text-base-content/40">
@@ -233,11 +233,11 @@ const filteredList = computed(() => {
       </div>
 
       <!-- Active Alerts List -->
-      <div v-else class="space-y-2 max-h-72 overflow-y-auto pr-1">
+      <div v-else class="space-y-1.5 max-h-72 overflow-y-auto pr-1">
         <div
           v-for="risk in collisionRisks"
           :key="risk.id"
-          class="p-2.5 rounded-xl border text-xs transition-all space-y-2"
+          class="p-2 rounded-sm border text-xs transition-all space-y-1.5"
           :class="
             risk.severity === 'critical'
               ? 'bg-error/15 border-error/50 shadow-md shadow-error/20'
@@ -277,7 +277,7 @@ const filteredList = computed(() => {
           </div>
 
           <!-- Spatial CPA Stats Grid -->
-          <div class="grid grid-cols-3 gap-1.5 bg-base-100/60 p-2 rounded-lg font-mono text-[11px]">
+          <div class="grid grid-cols-3 gap-1.5 bg-base-100/60 p-2 rounded-sm border border-base-content/10 font-mono text-[11px]">
             <div>
               <div class="text-[9px] text-base-content/60">目前距離</div>
               <div class="font-bold text-cyan-400">{{ risk.currentDistanceMeters }} m</div>

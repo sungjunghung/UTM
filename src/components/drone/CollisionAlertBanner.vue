@@ -42,66 +42,66 @@ const isWarning = computed(() => primaryRisk.value?.severity === 'warning')
       class="pointer-events-auto max-w-xl w-full mx-auto select-none"
     >
       <div
-        class="rounded-2xl p-3 sm:p-3.5 backdrop-blur-2xl shadow-2xl border flex flex-col gap-2 transition-all duration-200"
+        class="rounded-md p-2.5 sm:p-3 backdrop-blur-2xl shadow-2xl border flex flex-col gap-1.5 transition-all duration-150"
         :class="
           isCritical
-            ? 'bg-rose-950/90 border-rose-500/80 shadow-rose-950/70 text-rose-50 ring-2 ring-rose-500/40 animate-pulse'
+            ? 'bg-rose-950/95 border-rose-500 shadow-rose-950/70 text-rose-50 ring-1 ring-rose-500/50 animate-pulse'
             : isWarning
-            ? 'bg-amber-950/90 border-amber-500/80 shadow-amber-950/60 text-amber-50'
-            : 'bg-slate-900/90 border-yellow-500/50 text-yellow-50'
+            ? 'bg-amber-950/95 border-amber-500 shadow-amber-950/60 text-amber-50'
+            : 'bg-slate-900/95 border-yellow-500 text-yellow-50'
         "
       >
         <!-- Top bar: Header & Live Countdown Badge -->
         <div class="flex items-center justify-between gap-3">
           <div class="flex items-center gap-2 min-w-0">
             <div
-              class="w-7 h-7 rounded-xl flex items-center justify-center flex-shrink-0"
+              class="w-6 h-6 rounded-sm flex items-center justify-center flex-shrink-0"
               :class="isCritical ? 'bg-rose-500 text-white' : 'bg-amber-500 text-amber-950'"
             >
-              <MaterialIcon :name="isCritical ? 'report' : 'warning'" :size="18" />
+              <MaterialIcon :name="isCritical ? 'report' : 'warning'" :size="16" />
             </div>
             <div class="min-w-0">
               <div class="flex items-center gap-2">
                 <span
-                  class="font-black text-xs uppercase tracking-wider px-2 py-0.5 rounded-full"
+                  class="font-black text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded-sm"
                   :class="isCritical ? 'bg-rose-500/40 text-rose-200' : 'bg-amber-500/30 text-amber-200'"
                 >
                   {{ isCritical ? '🔴 空域緊急碰撞預警 (CRITICAL CPA)' : '🟠 空域衝突接近警戒' }}
                 </span>
-                <span class="text-[11px] opacity-75 hidden sm:inline">
-                  {{ collisionRisks.length > 1 ? `共 ${collisionRisks.length} 起預警` : '' }}
+                <span class="text-[11px] opacity-75 hidden sm:inline font-mono">
+                  {{ collisionRisks.length > 1 ? `[共 ${collisionRisks.length} 起預警]` : '' }}
                 </span>
               </div>
-              <div class="font-bold text-sm truncate mt-0.5">
+              <div class="font-bold text-xs truncate mt-0.5 font-mono">
                 {{ primaryRisk.droneACallsign }} ⚡ {{ primaryRisk.droneBCallsign }}
               </div>
             </div>
           </div>
 
           <!-- Countdown & Distance Big Indicators -->
-          <div class="flex items-center gap-2 flex-shrink-0">
+          <div class="flex items-center gap-1.5 flex-shrink-0">
             <!-- CPA Countdown Badge -->
             <div
-              class="px-2.5 py-1 rounded-xl text-center font-mono"
+              class="px-2 py-0.5 rounded-sm text-center font-mono"
               :class="isCritical ? 'bg-rose-500 text-white' : 'bg-amber-500 text-amber-950'"
             >
-              <div class="text-[9px] uppercase font-bold opacity-80">預估交會</div>
-              <div class="text-sm font-black leading-tight">{{ primaryRisk.timeToCpaSeconds }}s</div>
+              <div class="text-[8px] uppercase font-bold opacity-80">預估交會</div>
+              <div class="text-xs font-black leading-tight">{{ primaryRisk.timeToCpaSeconds }}s</div>
             </div>
 
             <!-- CPA Distance Badge -->
-            <div class="px-2.5 py-1 rounded-xl bg-black/40 text-center font-mono border border-white/10">
-              <div class="text-[9px] uppercase opacity-70">最近距離</div>
-              <div class="text-sm font-black text-cyan-300 leading-tight">{{ primaryRisk.cpaDistanceMeters }}m</div>
+            <div class="px-2 py-0.5 rounded-sm bg-black/60 text-center font-mono border border-white/20">
+              <div class="text-[8px] uppercase opacity-70">最近距離</div>
+              <div class="text-xs font-black text-cyan-300 leading-tight">{{ primaryRisk.cpaDistanceMeters }}m</div>
             </div>
 
             <!-- Focus Button -->
             <button
-              class="btn btn-sm btn-circle bg-white/10 hover:bg-white/20 border-white/20 text-white"
+              class="btn btn-xs rounded-sm bg-white/10 hover:bg-white/25 border-white/20 text-white px-2"
               title="立即定位衝突交會空域"
               @click="emit('focusCollision', primaryRisk.cpaCoordinate)"
             >
-              <MaterialIcon name="my_location" :size="18" />
+              <MaterialIcon name="my_location" :size="14" />
             </button>
           </div>
         </div>

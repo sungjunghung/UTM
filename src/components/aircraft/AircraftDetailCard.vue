@@ -109,15 +109,15 @@ watch(
 
     <!-- Main Card Body -->
     <div
-      class="w-80 sm:w-88 rounded-2xl bg-slate-900/95 backdrop-blur-xl border border-sky-500/40 shadow-2xl shadow-sky-950/50 overflow-hidden text-slate-100 transition-all duration-150"
+      class="w-80 sm:w-88 rounded-md bg-slate-900/95 backdrop-blur-xl border border-sky-500/50 shadow-2xl shadow-sky-950/60 overflow-hidden text-slate-100 transition-all duration-150"
     >
       <!-- Header with dynamic altitude gradient & flight callsign -->
       <div
-        class="px-3.5 py-2.5 flex items-center justify-between text-white relative overflow-hidden"
+        class="px-3.5 py-2.5 flex items-center justify-between text-white relative overflow-hidden border-b border-sky-500/30"
         :style="{ background: `linear-gradient(135deg, ${altColor}dd, #0f172a 90%)` }"
       >
         <div class="flex items-center gap-2.5 relative z-10 min-w-0">
-          <div class="w-8 h-8 rounded-xl bg-white/20 backdrop-blur-md flex items-center justify-center shrink-0 shadow-inner">
+          <div class="w-8 h-8 rounded-sm bg-white/20 backdrop-blur-md flex items-center justify-center shrink-0 border border-white/30">
             <MaterialIcon name="flight" :size="20" />
           </div>
           <div class="min-w-0">
@@ -127,11 +127,11 @@ watch(
               </h3>
               <span
                 v-if="airline"
-                class="badge badge-xs bg-sky-400/25 text-sky-200 border-none font-medium shrink-0"
+                class="badge badge-xs rounded-sm bg-sky-400/25 text-sky-200 border border-sky-400/30 font-medium shrink-0"
               >
                 {{ airline.nameZh }}
               </span>
-              <span class="badge badge-xs bg-white/20 text-white font-mono border-none shrink-0">
+              <span class="badge badge-xs rounded-sm bg-white/20 text-white font-mono border border-white/30 shrink-0">
                 {{ aircraft.hex.toUpperCase() }}
               </span>
             </div>
@@ -145,7 +145,7 @@ watch(
         </div>
 
         <button
-          class="btn btn-xs btn-circle btn-ghost text-white/80 hover:text-white hover:bg-white/25 z-10 shrink-0 ml-1"
+          class="btn btn-xs btn-square rounded-sm btn-ghost text-white/80 hover:text-white hover:bg-white/20 z-10 shrink-0 ml-1"
           title="關閉"
           @click="emit('close')"
         >
@@ -196,10 +196,10 @@ watch(
       </div>
 
       <!-- Quick Telemetry Grid (2x2) -->
-      <div class="p-3 space-y-2.5 text-xs bg-slate-900/40">
+      <div class="p-3 space-y-2 text-xs bg-slate-900/60">
         <div class="grid grid-cols-2 gap-2">
           <!-- Altitude -->
-          <div class="p-2 rounded-xl bg-slate-800/70 border border-slate-700/50">
+          <div class="p-2 rounded-sm bg-slate-800/80 border border-slate-700/70">
             <div class="text-slate-400 flex items-center justify-between text-[11px] mb-0.5">
               <div class="flex items-center gap-1">
                 <MaterialIcon name="height" :size="14" class="text-sky-400" />
@@ -214,7 +214,7 @@ watch(
           </div>
 
           <!-- Speed -->
-          <div class="p-2 rounded-xl bg-slate-800/70 border border-slate-700/50">
+          <div class="p-2 rounded-sm bg-slate-800/80 border border-slate-700/70">
             <div class="text-slate-400 flex items-center justify-between text-[11px] mb-0.5">
               <div class="flex items-center gap-1">
                 <MaterialIcon name="speed" :size="14" class="text-amber-400" />
@@ -228,7 +228,7 @@ watch(
           </div>
 
           <!-- Heading -->
-          <div class="p-2 rounded-xl bg-slate-800/70 border border-slate-700/50">
+          <div class="p-2 rounded-sm bg-slate-800/80 border border-slate-700/70">
             <div class="text-slate-400 flex items-center gap-1 text-[11px] mb-0.5">
               <MaterialIcon name="navigation" :size="14" class="text-cyan-400" />
               <span>航向</span>
@@ -245,7 +245,7 @@ watch(
           </div>
 
           <!-- Vertical Rate -->
-          <div class="p-2 rounded-xl bg-slate-800/70 border border-slate-700/50">
+          <div class="p-2 rounded-sm bg-slate-800/80 border border-slate-700/70">
             <div class="text-slate-400 flex items-center gap-1 text-[11px] mb-0.5">
               <MaterialIcon :name="verticalIcon" :size="14" :class="aircraft.verticalRate >= 0 ? 'text-emerald-400' : 'text-amber-400'" />
               <span>升降率</span>
@@ -257,7 +257,7 @@ watch(
         </div>
 
         <!-- Coordinates & Squawk -->
-        <div class="flex items-center justify-between px-2.5 py-1.5 rounded-lg bg-slate-800/50 text-[10px] font-mono text-slate-300 border border-slate-700/40">
+        <div class="flex items-center justify-between px-2.5 py-1.5 rounded-sm bg-slate-800/60 text-[10px] font-mono text-slate-300 border border-slate-700/60">
           <div>
             <span>{{ aircraft.latitude.toFixed(3) }}°N</span>
             <span class="ml-1.5">{{ aircraft.longitude.toFixed(3) }}°E</span>
@@ -272,7 +272,7 @@ watch(
         <!-- Action: Follow Camera Toggle -->
         <div>
           <button
-            class="btn btn-xs w-full gap-1.5 font-medium transition-all"
+            class="btn btn-xs rounded-sm w-full gap-1.5 font-medium transition-all"
             :class="isFollowing ? 'btn-primary shadow-md shadow-primary/30' : 'bg-slate-800 hover:bg-slate-700 border-slate-600 text-slate-200'"
             @click="emit('toggleFollow')"
           >

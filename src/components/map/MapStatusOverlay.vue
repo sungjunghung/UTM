@@ -19,7 +19,7 @@ const utmZone = computed(() => {
 </script>
 
 <template>
-  <div class="inline-flex items-center gap-3 px-3 py-1.5 rounded-xl bg-base-100/90 backdrop-blur-md border border-base-300 shadow-xl text-xs font-mono text-base-content/80 select-none">
+  <div class="inline-flex items-center gap-3 px-3 py-1.5 rounded-md bg-base-100/90 backdrop-blur-md border border-base-300 shadow-xl text-xs font-mono text-base-content/80 select-none">
     <!-- Coordinates -->
     <div class="flex items-center gap-1.5">
       <MaterialIcon name="explore" :size="16" class="text-primary" />
@@ -36,7 +36,7 @@ const utmZone = computed(() => {
 
     <!-- UTM Zone -->
     <div class="hidden sm:flex items-center gap-1">
-      <span class="badge badge-xs badge-primary font-bold">UTM</span>
+      <span class="badge badge-xs rounded-sm badge-primary font-bold">UTM</span>
       <span>Zone {{ utmZone }}</span>
     </div>
 

@@ -48,49 +48,50 @@ const layerOptions: { type: BaseLayerType; label: string; icon: string }[] = [
 </script>
 
 <template>
-  <div class="flex flex-col gap-2">
+  <div class="flex flex-col gap-1.5">
     <!-- Zoom Controls -->
-    <div class="join join-vertical shadow-xl bg-base-100/90 backdrop-blur-md border border-base-300 rounded-2xl overflow-hidden">
+    <div class="join join-vertical shadow-lg bg-base-100/95 backdrop-blur-md border border-base-300 rounded-md overflow-hidden">
       <button
         class="btn btn-sm btn-ghost join-item p-2 hover:bg-primary hover:text-primary-content transition-colors"
         title="放大 (Zoom In)"
         @click="emit('zoomIn')"
       >
-        <MaterialIcon name="add" :size="20" />
+        <MaterialIcon name="add" :size="18" />
       </button>
       <button
         class="btn btn-sm btn-ghost join-item p-2 hover:bg-primary hover:text-primary-content transition-colors"
         title="縮小 (Zoom Out)"
         @click="emit('zoomOut')"
       >
-        <MaterialIcon name="remove" :size="20" />
+        <MaterialIcon name="remove" :size="18" />
       </button>
       <button
         class="btn btn-sm btn-ghost join-item p-2 hover:bg-primary hover:text-primary-content transition-colors"
         title="重設視角 (Reset View)"
         @click="emit('resetView')"
       >
-        <MaterialIcon name="my_location" :size="20" />
+        <MaterialIcon name="my_location" :size="18" />
       </button>
     </div>
 
     <!-- Quick Actions -->
-    <div class="join join-vertical shadow-xl bg-base-100/90 backdrop-blur-md border border-base-300 rounded-2xl overflow-hidden">
+    <div class="join join-vertical shadow-lg bg-base-100/95 backdrop-blur-md border border-base-300 rounded-md overflow-hidden">
       <!-- Layer Switcher Dropdown -->
       <div class="dropdown dropdown-left">
         <div tabindex="0" role="button" class="btn btn-sm btn-ghost join-item p-2 hover:bg-primary hover:text-primary-content transition-colors" title="切換底圖 (Base Layers)">
-          <MaterialIcon name="layers" :size="20" />
+          <MaterialIcon name="layers" :size="18" />
         </div>
-        <ul tabindex="0" class="dropdown-content menu p-2 shadow-2xl bg-base-200/95 backdrop-blur-md rounded-2xl w-48 border border-base-300 text-xs space-y-1 z-50">
-          <li class="menu-title text-[11px] uppercase tracking-wider text-base-content/60 font-semibold px-2 py-1">
+        <ul tabindex="0" class="dropdown-content menu p-1.5 shadow-2xl bg-base-200/95 backdrop-blur-md rounded-md w-44 border border-base-300 text-xs space-y-0.5 z-50">
+          <li class="menu-title text-[10px] uppercase tracking-wider text-base-content/60 font-semibold px-2 py-1">
             底圖圖層 (Layers)
           </li>
           <li v-for="layer in layerOptions" :key="layer.type">
             <button
+              class="rounded-sm py-1.5"
               :class="{ 'active font-bold': props.activeLayer === layer.type }"
               @click="emit('switchLayer', layer.type)"
             >
-              <MaterialIcon :name="layer.icon" :size="16" />
+              <MaterialIcon :name="layer.icon" :size="15" />
               <span>{{ layer.label }}</span>
             </button>
           </li>
@@ -100,14 +101,14 @@ const layerOptions: { type: BaseLayerType; label: string; icon: string }[] = [
       <!-- Presets Location Dropdown -->
       <div class="dropdown dropdown-left">
         <div tabindex="0" role="button" class="btn btn-sm btn-ghost join-item p-2 hover:bg-primary hover:text-primary-content transition-colors" title="快速導航 (Presets)">
-          <MaterialIcon name="explore" :size="20" />
+          <MaterialIcon name="explore" :size="18" />
         </div>
-        <ul tabindex="0" class="dropdown-content menu p-2 shadow-2xl bg-base-200/95 backdrop-blur-md rounded-2xl w-52 border border-base-300 text-xs space-y-1 z-50">
-          <li class="menu-title text-[11px] uppercase tracking-wider text-base-content/60 font-semibold px-2 py-1">
+        <ul tabindex="0" class="dropdown-content menu p-1.5 shadow-2xl bg-base-200/95 backdrop-blur-md rounded-md w-48 border border-base-300 text-xs space-y-0.5 z-50">
+          <li class="menu-title text-[10px] uppercase tracking-wider text-base-content/60 font-semibold px-2 py-1">
             常用地點 (Presets)
           </li>
           <li v-for="loc in presets" :key="loc.name">
-            <button @click="emit('flyTo', loc.coords, loc.zoom)">
+            <button class="rounded-sm py-1.5" @click="emit('flyTo', loc.coords, loc.zoom)">
               <MaterialIcon name="pin_drop" :size="16" class="text-primary" />
               <span>{{ loc.name }}</span>
             </button>

@@ -49,10 +49,10 @@ const altitudeLegends = [
 </script>
 
 <template>
-  <div class="flex flex-col items-start gap-2 select-none">
+  <div class="flex flex-col items-start gap-1.5 select-none">
     <!-- Status Pill -->
     <div
-      class="flex items-center gap-2 p-1.5 pl-3 pr-2 rounded-2xl bg-base-100/90 backdrop-blur-xl border border-base-300 shadow-xl transition-all"
+      class="flex items-center gap-2 p-1 pl-2.5 pr-1.5 rounded-md bg-base-100/95 backdrop-blur-md border border-base-300 shadow-lg transition-all"
       :class="{ 'opacity-60 border-dashed': !showAircraft }"
     >
       <!-- Radar Pulse Indicator -->
@@ -128,21 +128,21 @@ const altitudeLegends = [
     <!-- Flight Search / Quick Jump Dropdown Popover -->
     <div
       v-if="isSearchOpen"
-      class="w-72 sm:w-80 rounded-2xl bg-base-100/95 backdrop-blur-xl border border-base-300 shadow-2xl p-3 space-y-2 animate-in fade-in zoom-in-95 duration-150"
+      class="w-72 sm:w-80 rounded-md bg-base-100/98 backdrop-blur-md border border-base-300 shadow-2xl p-2.5 space-y-2 animate-in fade-in duration-100"
     >
       <div class="flex items-center justify-between pb-1 border-b border-base-300">
         <span class="text-xs font-bold flex items-center gap-1.5">
-          <MaterialIcon name="flight_takeoff" :size="16" class="text-primary" />
+          <MaterialIcon name="flight_takeoff" :size="15" class="text-primary" />
           台灣空域即時航班清單
         </span>
         <button class="btn btn-xs btn-circle btn-ghost" @click="isSearchOpen = false">
-          <MaterialIcon name="close" :size="14" />
+          <MaterialIcon name="close" :size="13" />
         </button>
       </div>
 
       <!-- Search Input -->
-      <label class="input input-xs input-bordered flex items-center gap-1.5 bg-base-200/50">
-        <MaterialIcon name="search" :size="14" class="text-base-content/50" />
+      <label class="input input-xs input-bordered rounded-sm flex items-center gap-1.5 bg-base-200/50">
+        <MaterialIcon name="search" :size="13" class="text-base-content/50" />
         <input
           v-model="searchQuery"
           type="text"
@@ -159,7 +159,7 @@ const altitudeLegends = [
         <button
           v-for="ac in filteredList"
           :key="ac.hex"
-          class="w-full flex items-center justify-between p-2 rounded-xl bg-base-200/50 hover:bg-primary hover:text-primary-content text-left text-xs transition-colors group cursor-pointer"
+          class="w-full flex items-center justify-between p-1.5 rounded-sm bg-base-200/50 hover:bg-primary hover:text-primary-content text-left text-xs transition-colors group cursor-pointer"
           @click="emit('selectFlight', ac.hex)"
         >
           <div class="flex items-center gap-2 truncate">
@@ -195,17 +195,17 @@ const altitudeLegends = [
     <!-- Altitude Legend Popover -->
     <div
       v-if="isLegendOpen"
-      class="rounded-2xl bg-base-100/95 backdrop-blur-xl border border-base-300 shadow-2xl p-3 text-xs space-y-2 animate-in fade-in zoom-in-95 duration-150"
+      class="rounded-md bg-base-100/98 backdrop-blur-md border border-base-300 shadow-2xl p-2.5 text-xs space-y-1.5 animate-in fade-in duration-100"
     >
       <div class="flex items-center justify-between pb-1 border-b border-base-300">
         <span class="font-bold text-[11px] text-base-content/70">高度顏色分級 (Altitude)</span>
         <button class="btn btn-xs btn-circle btn-ghost" @click="isLegendOpen = false">
-          <MaterialIcon name="close" :size="14" />
+          <MaterialIcon name="close" :size="13" />
         </button>
       </div>
-      <div class="space-y-1.5 font-mono text-[11px]">
+      <div class="space-y-1 font-mono text-[11px]">
         <div v-for="leg in altitudeLegends" :key="leg.label" class="flex items-center gap-2">
-          <span class="w-3 h-3 rounded-md flex-shrink-0" :style="{ background: leg.color }"></span>
+          <span class="w-2.5 h-2.5 rounded-sm flex-shrink-0" :style="{ background: leg.color }"></span>
           <span>{{ leg.label }}</span>
         </div>
       </div>

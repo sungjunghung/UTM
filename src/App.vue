@@ -68,15 +68,15 @@ onMounted(() => {
             <div
               tabindex="0"
               role="button"
-              class="btn btn-sm px-3 rounded-2xl bg-base-100/90 backdrop-blur-md border border-base-300 shadow-xl gap-1.5"
+              class="btn btn-sm px-2.5 rounded-md bg-base-100/95 backdrop-blur-md border border-base-300 shadow-lg gap-1.5"
             >
-              <MaterialIcon name="palette" :size="16" />
+              <MaterialIcon name="palette" :size="15" />
               <span class="capitalize text-xs hidden sm:inline">{{ currentTheme }}</span>
-              <MaterialIcon name="expand_more" :size="16" />
+              <MaterialIcon name="expand_more" :size="14" />
             </div>
             <ul
               tabindex="0"
-              class="dropdown-content menu p-2 shadow-2xl bg-base-200/95 backdrop-blur-md rounded-2xl w-48 max-h-80 overflow-y-auto z-50 border border-base-300 text-xs"
+              class="dropdown-content menu p-1.5 shadow-2xl bg-base-200/95 backdrop-blur-md rounded-md w-44 max-h-80 overflow-y-auto z-50 border border-base-300 text-xs space-y-0.5"
             >
               <li v-for="t in themes" :key="t">
                 <button
