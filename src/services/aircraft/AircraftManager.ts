@@ -55,6 +55,7 @@ export class AircraftManager {
   // Callbacks
   private updateCallbacks: Set<(list: AircraftInfo[]) => void> = new Set()
   private selectCallbacks: Set<(info: AircraftInfo | null) => void> = new Set()
+  private selectedMoveCallbacks: Set<(lonLat: [number, number], info: AircraftInfo) => void> = new Set()
   private followChangeCallbacks: Set<(following: boolean) => void> = new Set()
   private loadingCallbacks: Set<(loading: boolean) => void> = new Set()
   private errorCallbacks: Set<(err: string | null) => void> = new Set()
@@ -305,6 +306,15 @@ export class AircraftManager {
       // Request OpenLayers map canvas to render every animation frame!
       this.map?.render()
 
+      // Continuous 60fps tracking for selected aircraft
+      if (this.selectedHex) {
+        const selectedEntity = this.aircraftMap.get(this.selectedHex)
+        if (selectedEntity) {
+          const lonLat = selectedEntity.currentLonLat
+          this.selectedMoveCallbacks.forEach((cb) => cb(lonLat, selectedEntity.getInfo()))
+        }
+      }
+
       // Auto-follow selected flight if enabled
       if (this.selectedHex && this.followSelected && this.map) {
         const selectedEntity = this.aircraftMap.get(this.selectedHex)
@@ -384,6 +394,11 @@ export class AircraftManager {
 
   public isFollowingSelected(): boolean {
     return this.followSelected
+  }
+
+  public onSelectedMove(cb: (lonLat: [number, number], info: AircraftInfo) => void): () => void {
+    this.selectedMoveCallbacks.add(cb)
+    return () => this.selectedMoveCallbacks.delete(cb)
   }
 
   public onFollowChange(cb: (following: boolean) => void): () => void {

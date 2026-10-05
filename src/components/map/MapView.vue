@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue'
+import Overlay from 'ol/Overlay'
+import { fromLonLat } from 'ol/proj'
 import { MapManager } from '../../services/map/MapManager'
 import type { BaseLayerType } from '../../services/map/types'
 import { AircraftManager } from '../../services/aircraft/AircraftManager'
@@ -11,8 +13,10 @@ import AircraftRadarWidget from '../aircraft/AircraftRadarWidget.vue'
 import MaterialIcon from '../MaterialIcon.vue'
 
 const mapTarget = ref<HTMLDivElement | null>(null)
+const detailOverlayTarget = ref<HTMLDivElement | null>(null)
 let mapManager: MapManager | null = null
 let aircraftManager: AircraftManager | null = null
+let detailOverlay: Overlay | null = null
 
 // Reactive state
 const activeLayer = ref<BaseLayerType>('osm-dark')
@@ -60,6 +64,17 @@ onMounted(() => {
 
     aircraftManager.attachToMap(olMap)
 
+    // Mount aircraft detail card overlay to OpenLayers map
+    if (detailOverlayTarget.value) {
+      detailOverlay = new Overlay({
+        element: detailOverlayTarget.value,
+        positioning: 'bottom-left',
+        offset: [28, -24],
+        stopEvent: true,
+      })
+      olMap.addOverlay(detailOverlay)
+    }
+
     aircraftManager.onUpdate((list) => {
       aircraftList.value = list
       if (selectedAircraft.value) {
@@ -70,9 +85,25 @@ onMounted(() => {
 
     aircraftManager.onSelect((info) => {
       selectedAircraft.value = info
-      if (!info) {
+      if (info && detailOverlay) {
+        detailOverlay.setPosition(fromLonLat([info.longitude, info.latitude]))
+      } else if (!info && detailOverlay) {
+        detailOverlay.setPosition(undefined)
         isFollowingFlight.value = false
         aircraftManager?.setFollowSelected(false)
+      }
+    })
+
+    // Real-time 60fps tracking: glide card smoothly beside the moving aircraft
+    let lastTelemetryTime = 0
+    aircraftManager.onSelectedMove((lonLat, info) => {
+      if (detailOverlay && selectedAircraft.value) {
+        detailOverlay.setPosition(fromLonLat(lonLat))
+      }
+      const now = performance.now()
+      if (now - lastTelemetryTime > 150) {
+        lastTelemetryTime = now
+        selectedAircraft.value = info
       }
     })
 
@@ -131,6 +162,10 @@ onUnmounted(() => {
   unsubClick?.()
   unsubView?.()
   resizeObserver?.disconnect()
+  if (detailOverlay && mapManager) {
+    mapManager.getMap()?.removeOverlay(detailOverlay)
+    detailOverlay = null
+  }
   aircraftManager?.destroy()
   mapManager?.destroy()
   aircraftManager = null
@@ -147,6 +182,7 @@ function handleCloseDetail() {
   selectedAircraft.value = null
   isFollowingFlight.value = false
   aircraftManager?.setFollowSelected(false)
+  detailOverlay?.setPosition(undefined)
 }
 
 function handleToggleFollow() {
@@ -267,15 +303,16 @@ function showToast(msg: string) {
       />
     </aside>
 
-    <!-- Floating Flight Detail Card (Bottom-Right or Center-Right) -->
-    <aside v-if="selectedAircraft" class="absolute bottom-16 right-4 sm:bottom-20 sm:right-6 z-30">
+    <!-- OpenLayers Map Overlay: Aircraft Detail HUD directly tethered to the plane -->
+    <div ref="detailOverlayTarget" class="pointer-events-auto select-none">
       <AircraftDetailCard
+        v-if="selectedAircraft"
         :aircraft="selectedAircraft"
         :is-following="isFollowingFlight"
         @close="handleCloseDetail"
         @toggle-follow="handleToggleFollow"
       />
-    </aside>
+    </div>
 
     <!-- Floating Bottom Status Bar (Coordinates & UTM Zone) -->
     <div class="absolute bottom-4 left-36 z-20 hidden md:block">
