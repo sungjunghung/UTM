@@ -57,7 +57,7 @@ export class MapManager {
       view: this.view,
       controls: defaultControls({
         zoom: false, // We provide modern DaisyUI controls
-        attribution: true,
+        attribution: false,
       }).extend([
         new ScaleLine({
           units: 'metric',

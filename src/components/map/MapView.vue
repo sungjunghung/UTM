@@ -552,7 +552,7 @@ function showToast(msg: string) {
     </div>
 
     <!-- Floating Bottom Status Bar (Coordinates & UTM Zone) -->
-    <div class="absolute bottom-4 left-36 z-20 hidden md:block">
+    <div class="absolute bottom-4 left-4 z-20 hidden md:block">
       <MapStatusOverlay
         :mouse-coord="mouseCoord"
         :center-coord="centerCoord"

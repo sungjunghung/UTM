@@ -15,15 +15,17 @@ body,
   overflow: hidden;
 }
 
-/* OpenLayers scale line customized for modern dark/light translucent design */
+/* OpenLayers scale line positioned on the right with modern translucent design */
 .ol-scale-line {
-  background: rgba(15, 23, 42, 0.8) !important;
+  background: rgba(15, 23, 42, 0.85) !important;
   backdrop-filter: blur(8px);
-  border-radius: 8px !important;
+  border-radius: 6px !important;
   padding: 4px 8px !important;
   border: 1px solid rgba(255, 255, 255, 0.15);
   bottom: 14px !important;
-  left: 16px !important;
+  left: auto !important;
+  right: 16px !important;
+  z-index: 20;
 }
 
 .ol-scale-line-inner {
@@ -33,11 +35,9 @@ body,
   font-size: 11px !important;
 }
 
+/* Remove bottom right attribution text */
 .ol-attribution {
-  border-radius: 6px !important;
-  font-size: 11px !important;
-  bottom: 14px !important;
-  right: 16px !important;
+  display: none !important;
 }
 
 /* OpenStreetMap Client-side Dark Radar Mode (100% Open Source & Zero API Key) */
