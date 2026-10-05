@@ -13,21 +13,29 @@ export class AircraftEntity {
   public model: string
   public altitude: number
   public isGround: boolean
-  public speed: number
-  public heading: number
-  public verticalRate: number
+  public speed: number // knots
+  public heading: number // degrees (0-360)
+  public verticalRate: number // ft/min
   public squawk: string
   public lastSeen: number
 
-  // Coordinates [lon, lat]
+  // Current physics coordinates [lon, lat]
   public currentLonLat: [number, number]
-  public startLonLat: [number, number]
-  public targetLonLat: [number, number]
+
+  // Last verified radar coordinates
+  private lastRadarLonLat: [number, number]
+
+  // Soft reconciliation offset [dLon, dLat] to smoothly absorb GPS packet drift
+  private correctionOffset: [number, number] = [0, 0]
+
+  // Flight history trail [lon, lat][]
   public trail: [number, number][] = []
+  private lastTrailRecordTime: number = 0
 
   // OpenLayers Features
   private planeFeature: Feature<Point>
   private trailFeature: Feature<LineString>
+  private projectionFeature: Feature<LineString> // Ahead heading vector line
 
   private isSelected: boolean = false
 
@@ -47,9 +55,9 @@ export class AircraftEntity {
     const lon = data.lon || 0
     const lat = data.lat || 0
     this.currentLonLat = [lon, lat]
-    this.startLonLat = [lon, lat]
-    this.targetLonLat = [lon, lat]
+    this.lastRadarLonLat = [lon, lat]
     this.trail.push([lon, lat])
+    this.lastTrailRecordTime = Date.now()
 
     // Initialize OpenLayers Features
     const projCoord = fromLonLat([lon, lat])
@@ -64,8 +72,15 @@ export class AircraftEntity {
       hex: this.hex,
     })
 
+    // Forward projection heading vector line
+    this.projectionFeature = new Feature({
+      geometry: new LineString([projCoord, projCoord]),
+      hex: this.hex,
+    })
+
     this.updateStyle()
     this.updateTrailStyle()
+    this.updateProjectionVector()
   }
 
   public getPlaneFeature(): Feature<Point> {
@@ -74,6 +89,10 @@ export class AircraftEntity {
 
   public getTrailFeature(): Feature<LineString> {
     return this.trailFeature
+  }
+
+  public getProjectionFeature(): Feature<LineString> {
+    return this.projectionFeature
   }
 
   /**
@@ -97,51 +116,97 @@ export class AircraftEntity {
     }
 
     if (data.lon !== undefined && data.lat !== undefined) {
-      this.startLonLat = [...this.currentLonLat]
-      this.targetLonLat = [data.lon, data.lat]
+      const isNewCoordinate =
+        Math.abs(data.lon - this.lastRadarLonLat[0]) > 0.0001 ||
+        Math.abs(data.lat - this.lastRadarLonLat[1]) > 0.0001
 
-      // Append to trail (keep max 30 points)
-      this.trail.push([data.lon, data.lat])
-      if (this.trail.length > 30) {
-        this.trail.shift()
+      if (isNewCoordinate) {
+        this.lastRadarLonLat = [data.lon, data.lat]
+
+        // Calculate discrepancy between current extrapolated position and new radar packet
+        const errLon = data.lon - this.currentLonLat[0]
+        const errLat = data.lat - this.currentLonLat[1]
+        const errDistApproxKm = Math.sqrt(errLon * errLon + errLat * errLat) * 111
+
+        if (errDistApproxKm > 10) {
+          // Large teleport or first sync: snap directly
+          this.currentLonLat = [data.lon, data.lat]
+          this.correctionOffset = [0, 0]
+        } else {
+          // Small drift: gently blend error over the next few frames without stopping!
+          this.correctionOffset = [errLon, errLat]
+        }
+
+        // Add verified radar point to trail
+        this.appendTrailPoint([data.lon, data.lat])
       }
-      this.updateTrailGeometry()
     }
 
     this.updateStyle()
+    this.updateProjectionVector()
   }
 
   /**
-   * Smooth interpolation step with dead reckoning projection
+   * Continuous 60 FPS Physics Step based on ground speed (knots) and heading (track)
+   * dt: elapsed seconds since last frame (~0.016s)
    */
-  public stepInterpolation(progress: number, pollIntervalSec: number = 8): void {
-    if (progress <= 1.0) {
-      const clamped = Math.max(progress, 0)
-      const lon = this.startLonLat[0] + (this.targetLonLat[0] - this.startLonLat[0]) * clamped
-      const lat = this.startLonLat[1] + (this.targetLonLat[1] - this.startLonLat[1]) * clamped
-      this.currentLonLat = [lon, lat]
-    } else if (this.speed > 30 && !this.isGround) {
-      // Dead-reckoning: project forward using speed (knots) and heading
-      const overdueSec = Math.min((progress - 1.0) * pollIntervalSec, 30) // max 30s projection
-      const distMeters = this.speed * 0.514444 * overdueSec
+  public stepPhysics(dt: number): void {
+    if (dt <= 0 || dt > 1.0) dt = 0.016 // safeguard against tab freeze spikes
+
+    // 1. Move plane forward along heading if in flight
+    if (!this.isGround && this.speed > 15) {
+      const distMeters = this.speed * 0.514444 * dt
       const rad = (this.heading * Math.PI) / 180
       const dLat = (distMeters * Math.cos(rad)) / 111320
-      const latRad = (this.targetLonLat[1] * Math.PI) / 180
+      const latRad = (this.currentLonLat[1] * Math.PI) / 180
       const dLon = (distMeters * Math.sin(rad)) / (111320 * Math.max(Math.cos(latRad), 0.1))
-      this.currentLonLat = [this.targetLonLat[0] + dLon, this.targetLonLat[1] + dLat]
+
+      this.currentLonLat[0] += dLon
+      this.currentLonLat[1] += dLat
     }
 
-    // Update geometry point
+    // 2. Gently absorb soft radar packet correction offset (Kalman-style smoothing)
+    if (Math.abs(this.correctionOffset[0]) > 0.00001 || Math.abs(this.correctionOffset[1]) > 0.00001) {
+      const blendRate = Math.min(dt * 0.8, 0.15)
+      const stepLon = this.correctionOffset[0] * blendRate
+      const stepLat = this.correctionOffset[1] * blendRate
+
+      this.currentLonLat[0] += stepLon
+      this.currentLonLat[1] += stepLat
+      this.correctionOffset[0] -= stepLon
+      this.correctionOffset[1] -= stepLat
+    }
+
+    // 3. Update OpenLayers plane marker position
     const geom = this.planeFeature.getGeometry()
     if (geom) {
       geom.setCoordinates(fromLonLat(this.currentLonLat))
     }
+
+    // 4. Record continuous trail point every 1.5 seconds while moving
+    const now = Date.now()
+    if (now - this.lastTrailRecordTime > 1500 && this.speed > 25) {
+      this.lastTrailRecordTime = now
+      this.appendTrailPoint([...this.currentLonLat])
+    }
+
+    // 5. Update heading vector line (projected forward route)
+    this.updateProjectionVector()
+  }
+
+  private appendTrailPoint(pt: [number, number]): void {
+    this.trail.push(pt)
+    if (this.trail.length > 40) {
+      this.trail.shift()
+    }
+    this.updateTrailGeometry()
   }
 
   public setSelected(selected: boolean): void {
     this.isSelected = selected
     this.updateStyle()
     this.updateTrailStyle()
+    this.updateProjectionVector()
   }
 
   public getInfo(): AircraftInfo {
@@ -173,19 +238,57 @@ export class AircraftEntity {
   private updateTrailGeometry(): void {
     const geom = this.trailFeature.getGeometry()
     if (geom && this.trail.length > 1) {
-      const projected = this.trail.map((pt) => fromLonLat(pt))
+      // Connect trail up to current real-time plane position
+      const points = [...this.trail, this.currentLonLat]
+      const projected = points.map((pt) => fromLonLat(pt))
       geom.setCoordinates(projected)
     }
   }
 
   private updateTrailStyle(): void {
-    const color = this.isSelected ? '#ec4899' : getAltitudeColor(this.altitude, this.isGround)
+    const color = this.isSelected ? '#f43f5e' : getAltitudeColor(this.altitude, this.isGround)
     this.trailFeature.setStyle(
       new Style({
         stroke: new Stroke({
-          color: this.isSelected ? 'rgba(236, 72, 153, 0.8)' : `${color}88`,
-          width: this.isSelected ? 3 : 2,
-          lineDash: [4, 4],
+          color: this.isSelected ? '#f43f5e' : `${color}cc`,
+          width: this.isSelected ? 3.5 : 2.5,
+          lineDash: this.isSelected ? undefined : [6, 4],
+        }),
+      })
+    )
+  }
+
+  /**
+   * Compute forward projected heading vector (Ahead route line)
+   * Projects 25 nautical miles forward along heading
+   */
+  private updateProjectionVector(): void {
+    const geom = this.projectionFeature.getGeometry()
+    if (!geom) return
+
+    if (!this.isSelected || this.isGround || this.speed < 30) {
+      geom.setCoordinates([])
+      return
+    }
+
+    // Project 25 nautical miles (~46.3 km) in the direction of flight
+    const aheadMeters = 46300
+    const rad = (this.heading * Math.PI) / 180
+    const dLat = (aheadMeters * Math.cos(rad)) / 111320
+    const latRad = (this.currentLonLat[1] * Math.PI) / 180
+    const dLon = (aheadMeters * Math.sin(rad)) / (111320 * Math.max(Math.cos(latRad), 0.1))
+
+    const pStart = fromLonLat(this.currentLonLat)
+    const pEnd = fromLonLat([this.currentLonLat[0] + dLon, this.currentLonLat[1] + dLat])
+
+    geom.setCoordinates([pStart, pEnd])
+
+    this.projectionFeature.setStyle(
+      new Style({
+        stroke: new Stroke({
+          color: '#38bdf8',
+          width: 2.5,
+          lineDash: [8, 6],
         }),
       })
     )

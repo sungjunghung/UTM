@@ -10,7 +10,7 @@ import { defineConfig, type Plugin } from 'vite'
 function adsbCachePlugin(): Plugin {
   let cachedJson = ''
   let cacheTimestamp = 0
-  const CACHE_TTL_MS = 8000 // 8 seconds cache
+  const CACHE_TTL_MS = 4000 // 4 seconds cache
   let inflightRequest: Promise<string> | null = null
 
   return {

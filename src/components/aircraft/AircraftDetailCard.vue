@@ -142,6 +142,17 @@ const verticalIcon = computed(() => {
         </div>
       </div>
 
+      <!-- Route & Heading Status -->
+      <div class="flex items-center justify-between px-3 py-2 rounded-xl bg-primary/10 border border-primary/20 text-xs">
+        <div class="flex items-center gap-1.5 text-primary font-semibold">
+          <MaterialIcon name="route" :size="16" />
+          <span>動態航線與前瞻預測已啟用</span>
+        </div>
+        <span class="text-[11px] font-mono text-base-content/70">
+          {{ aircraft.trail.length }} 個航跡點
+        </span>
+      </div>
+
       <!-- Action Buttons -->
       <div class="flex gap-2">
         <button

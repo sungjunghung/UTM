@@ -20,8 +20,12 @@ export class AircraftManager {
   // OpenLayers Vector Layers
   private planeSource: VectorSource = new VectorSource()
   private planeLayer: VectorLayer<VectorSource>
+
   private trailSource: VectorSource = new VectorSource()
   private trailLayer: VectorLayer<VectorSource>
+
+  private projectionSource: VectorSource = new VectorSource()
+  private projectionLayer: VectorLayer<VectorSource>
 
   // Configuration
   private centerLat: number
@@ -33,7 +37,7 @@ export class AircraftManager {
   // State
   private pollTimer: ReturnType<typeof setInterval> | null = null
   private animationFrameId: number | null = null
-  private animationStartTime: number = Date.now()
+  private lastFrameTimestamp: number = performance.now()
   private isPolling: boolean = false
   private selectedHex: string | null = null
   private followSelected: boolean = false
@@ -48,7 +52,7 @@ export class AircraftManager {
     this.centerLat = options.centerLat ?? 24.7887 // NCHC Taiwan
     this.centerLon = options.centerLon ?? 121.0028
     this.radiusNm = options.radiusNm ?? 120
-    this.pollIntervalMs = options.pollIntervalMs ?? 6000
+    this.pollIntervalMs = options.pollIntervalMs ?? 5000
     this.showTrails = options.showTrails ?? true
 
     // Initialize layers
@@ -58,9 +62,14 @@ export class AircraftManager {
       visible: this.showTrails,
     })
 
+    this.projectionLayer = new VectorLayer({
+      source: this.projectionSource,
+      zIndex: 20,
+    })
+
     this.planeLayer = new VectorLayer({
       source: this.planeSource,
-      zIndex: 25,
+      zIndex: 30,
     })
   }
 
@@ -70,6 +79,7 @@ export class AircraftManager {
   public attachToMap(map: OlMap): void {
     this.map = map
     this.map.addLayer(this.trailLayer)
+    this.map.addLayer(this.projectionLayer)
     this.map.addLayer(this.planeLayer)
 
     // Listen to map click on aircraft
@@ -90,7 +100,7 @@ export class AircraftManager {
     // Page visibility listener: stop polling when tab is hidden
     document.addEventListener('visibilitychange', this.handleVisibilityChange)
 
-    // Start background polling & 60fps interpolation loop
+    // Start background polling & 60fps velocity animation loop
     this.start()
   }
 
@@ -114,7 +124,7 @@ export class AircraftManager {
       this.fetchData()
     }, this.pollIntervalMs)
 
-    // Start 60fps smooth interpolation loop
+    // Start continuous 60fps velocity physics loop
     this.startAnimationLoop()
   }
 
@@ -144,9 +154,7 @@ export class AircraftManager {
       const endpoint = `/api/adsb/v2/point/${this.centerLat}/${this.centerLon}/${this.radiusNm}`
       const response = await fetch(endpoint)
       if (response.status === 429) {
-        // Rate limited: back off for 6 seconds
-        this.cooldownUntil = Date.now() + 6000
-        this.notifyError('API 請求過於頻繁，等待緩衝冷卻中...')
+        this.cooldownUntil = Date.now() + 5000
         return
       }
       if (!response.ok) {
@@ -166,7 +174,6 @@ export class AircraftManager {
   }
 
   private processData(rawList: any[]): void {
-    this.animationStartTime = Date.now()
     const activeHexes = new Set<string>()
 
     rawList.forEach((raw) => {
@@ -183,6 +190,7 @@ export class AircraftManager {
         this.aircraftMap.set(raw.hex, entity)
         this.planeSource.addFeature(entity.getPlaneFeature())
         this.trailSource.addFeature(entity.getTrailFeature())
+        this.projectionSource.addFeature(entity.getProjectionFeature())
       }
     })
 
@@ -192,6 +200,7 @@ export class AircraftManager {
       if (!activeHexes.has(hex) && now - entity.lastSeen > 60000) {
         this.planeSource.removeFeature(entity.getPlaneFeature())
         this.trailSource.removeFeature(entity.getTrailFeature())
+        this.projectionSource.removeFeature(entity.getProjectionFeature())
         this.aircraftMap.delete(hex)
         if (this.selectedHex === hex) {
           this.selectAircraft(null)
@@ -203,17 +212,20 @@ export class AircraftManager {
   }
 
   /**
-   * 60 FPS requestAnimationFrame Loop for linear interpolation
+   * Continuous 60 FPS velocity physics loop
+   * Uses real delta time so aircraft glide smoothly across the screen without stopping
    */
   private startAnimationLoop(): void {
-    const loop = () => {
-      if (!this.isPolling) return
-      const elapsed = Date.now() - this.animationStartTime
-      const progress = elapsed / this.pollIntervalMs
-      const pollSec = this.pollIntervalMs / 1000
+    this.lastFrameTimestamp = performance.now()
 
+    const loop = (currentTimestamp: number) => {
+      if (!this.isPolling) return
+      const dt = Math.min((currentTimestamp - this.lastFrameTimestamp) / 1000, 0.1)
+      this.lastFrameTimestamp = currentTimestamp
+
+      // Advance physics position of every aircraft by velocity * dt
       this.aircraftMap.forEach((entity) => {
-        entity.stepInterpolation(progress, pollSec)
+        entity.stepPhysics(dt)
       })
 
       // Auto-follow selected flight if enabled
@@ -227,6 +239,7 @@ export class AircraftManager {
 
       this.animationFrameId = requestAnimationFrame(loop)
     }
+
     this.animationFrameId = requestAnimationFrame(loop)
   }
 
@@ -336,11 +349,13 @@ export class AircraftManager {
 
     if (this.map) {
       this.map.removeLayer(this.planeLayer)
+      this.map.removeLayer(this.projectionLayer)
       this.map.removeLayer(this.trailLayer)
       this.map = null
     }
 
     this.planeSource.clear()
+    this.projectionSource.clear()
     this.trailSource.clear()
     this.aircraftMap.clear()
   }
