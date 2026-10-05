@@ -61,18 +61,11 @@ onMounted(() => {
 
 <template>
   <div class="relative w-screen h-screen overflow-hidden flex flex-col bg-base-100 text-base-content">
-    <!-- Floating Minimal Top Navigation Bar -->
-    <header class="absolute top-4 left-4 right-4 z-30 pointer-events-none">
-      <div class="flex items-center justify-between">
-        <!-- Brand Title: Pure Borderless Glass UTM Text -->
-        <div class="pointer-events-auto select-none pl-2 pt-1">
-          <span class="glass-brand-text cursor-default" title="Universal Transverse Mercator">
-            UTM
-          </span>
-        </div>
-
+    <!-- Fullscreen Map Component (Fills 100% of viewport) -->
+    <main class="w-full h-full flex-1">
+      <MapView>
         <!-- Theme Picker & Action Icons -->
-        <div class="pointer-events-auto flex items-center gap-2">
+        <template #header-right>
           <div class="dropdown dropdown-end">
             <div
               tabindex="0"
@@ -99,13 +92,8 @@ onMounted(() => {
               </li>
             </ul>
           </div>
-        </div>
-      </div>
-    </header>
-
-    <!-- Fullscreen Map Component (Fills 100% of viewport) -->
-    <main class="w-full h-full flex-1">
-      <MapView />
+        </template>
+      </MapView>
     </main>
   </div>
 </template>

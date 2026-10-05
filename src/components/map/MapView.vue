@@ -225,18 +225,33 @@ function showToast(msg: string) {
       tabindex="0"
     ></div>
 
-    <!-- Floating Top-Left Radar Status & Search Widget -->
-    <aside class="absolute top-20 left-4 z-20">
-      <AircraftRadarWidget
-        :aircraft-list="aircraftList"
-        :is-loading="isAircraftLoading"
-        :error="aircraftError"
-        :show-trails="showTrails"
-        @select-flight="handleSelectFlight"
-        @toggle-trails="handleToggleTrails"
-        @refresh="handleRefreshAircraft"
-      />
-    </aside>
+    <!-- Floating Top Navigation Bar with UTM Title & Radar Tracking Widget -->
+    <header class="absolute top-4 left-4 right-4 z-30 pointer-events-none">
+      <div class="flex items-start justify-between">
+        <!-- Brand Title & Radar Widget: Pure Borderless Glass UTM Text + Radar Tracking -->
+        <div class="pointer-events-auto flex items-start gap-3">
+          <div class="pt-1.5 select-none pl-2">
+            <span class="glass-brand-text cursor-default" title="Universal Transverse Mercator">
+              UTM
+            </span>
+          </div>
+          <AircraftRadarWidget
+            :aircraft-list="aircraftList"
+            :is-loading="isAircraftLoading"
+            :error="aircraftError"
+            :show-trails="showTrails"
+            @select-flight="handleSelectFlight"
+            @toggle-trails="handleToggleTrails"
+            @refresh="handleRefreshAircraft"
+          />
+        </div>
+
+        <!-- Right Header Action Slot (Theme Picker, etc.) -->
+        <div class="pointer-events-auto flex items-center gap-2">
+          <slot name="header-right" />
+        </div>
+      </div>
+    </header>
 
     <!-- Floating Top-Right Map Controls Toolbar -->
     <aside class="absolute top-20 right-4 z-20">
