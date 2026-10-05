@@ -17,7 +17,8 @@ const emit = defineEmits<{
 const showAttitude = ref(true)
 
 const isAltitudeLegal = computed(() => {
-  return (props.drone?.altitudeAglMeters || 0) <= 120
+  const maxLegal = props.drone?.maxLegalAltitudeMeters || (props.drone?.airspaceZone === 'yellow' ? 60 : 120)
+  return (props.drone?.altitudeAglMeters || 0) <= maxLegal
 })
 
 const batteryColor = computed(() => {
@@ -160,8 +161,21 @@ const batteryBg = computed(() => {
 
       <!-- Quick Telemetry Grid (2x2) -->
       <div class="p-3.5 space-y-2.5 text-sm bg-slate-900/60">
+        <!-- Airspace Zone Regulatory Banner -->
+        <div
+          v-if="drone.airspaceZone"
+          class="flex items-center justify-between px-3 py-1.5 rounded-sm border text-sm"
+          :class="drone.airspaceZone === 'yellow' ? 'bg-amber-950/40 border-amber-500/40 text-amber-200' : 'bg-emerald-950/40 border-emerald-500/40 text-emerald-200'"
+        >
+          <div class="flex items-center gap-1.5 font-medium">
+            <span class="w-2.5 h-2.5 rounded-full shrink-0" :class="drone.airspaceZone === 'yellow' ? 'bg-amber-400' : 'bg-emerald-400'"></span>
+            <span>{{ drone.airspaceZone === 'yellow' ? '🟠 限航區 (黃區 · 限高60m)' : '🟢 非管制空域 (綠區 · 限高120m)' }}</span>
+          </div>
+          <span v-if="drone.zoneName" class="text-slate-300 font-mono text-xs shrink-0">{{ drone.zoneName }}</span>
+        </div>
+
         <div class="grid grid-cols-2 gap-2.5">
-          <!-- Altitude AGL (Against 120m Legal Limit) -->
+          <!-- Altitude AGL (Against Legal Limit) -->
           <div class="p-2.5 rounded-sm bg-slate-800/80 border border-slate-700/70">
             <div class="text-slate-400 flex items-center justify-between text-sm mb-1">
               <div class="flex items-center gap-1.5">
@@ -170,9 +184,9 @@ const batteryBg = computed(() => {
               </div>
               <span
                 class="badge badge-sm rounded-sm text-xs font-bold border-none"
-                :class="isAltitudeLegal ? 'bg-emerald-500/20 text-emerald-300' : 'bg-amber-500/20 text-amber-300'"
+                :class="isAltitudeLegal ? 'bg-emerald-500/20 text-emerald-300' : 'bg-rose-500/20 text-rose-300'"
               >
-                {{ isAltitudeLegal ? '≤120m 合規' : '超高警戒' }}
+                {{ isAltitudeLegal ? `≤${drone.maxLegalAltitudeMeters || (drone.airspaceZone === 'yellow' ? 60 : 120)}m 合規` : '超高警戒' }}
               </span>
             </div>
             <div class="font-bold text-lg font-mono text-slate-100">

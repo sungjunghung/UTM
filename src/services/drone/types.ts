@@ -22,6 +22,9 @@ export interface DroneInfo {
   longitude: number
   altitudeAglMeters: number // Height Above Ground Level in meters
   altitudeAglFeet: number
+  airspaceZone?: 'yellow' | 'green' // current airspace: yellow (限高60m/200ft) or green (非管制限高120m/400ft)
+  maxLegalAltitudeMeters?: number // 60 for yellow zone, 120 for green zone
+  zoneName?: string // e.g. 寶山水庫限航區, 香山海岸限航區, 寶山綠區
   speedKmh: number
   heading: number // degrees (0-360)
   pitchDeg?: number // degrees (-90 to +90, nose up/down)

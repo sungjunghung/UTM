@@ -379,8 +379,8 @@ function handleToggleDrones() {
 }
 
 function handleFocusDroneZone() {
-  mapManager?.flyTo([121.0028, 24.7887], 13.5)
-  showToast('已聚焦新竹國網中心無人機空域')
+  mapManager?.flyTo([121.035, 24.745], 13.5)
+  showToast('已聚焦新竹合法空域無人機作業群')
 }
 
 function handleTriggerConflictSimulation() {

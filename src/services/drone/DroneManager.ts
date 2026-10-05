@@ -69,7 +69,7 @@ export class DroneManager {
       zIndex: 45,
     })
 
-    this.seedInitialFleet(options.centerLat ?? 24.7887, options.centerLon ?? 121.0028)
+    this.seedInitialFleet(options.centerLat ?? 24.745, options.centerLon ?? 121.035)
   }
 
   public attachToMap(map: OlMap): void {
@@ -260,8 +260,8 @@ export class DroneManager {
 
   /**
    * Interactive Simulator: Trigger 2 simultaneous collision path encounters
-   * Encounter 1: UAV-01 vs UAV-02 (Hsinchu Science Park)
-   * Encounter 2: UAV-08 vs UAV-06 (Interchange / Guangfu Rd)
+   * Encounter 1: UAV-01 vs UAV-02 (Baoshan Green Zone / 非管制空域 ≤120m)
+   * Encounter 2: UAV-08 vs UAV-06 (Zhudong Erchong Yellow Zone / 限航區 ≤60m)
    */
   public triggerConflictSimulation(): void {
     const d1 = this.droneMap.get('UAV-NCHC-01')
@@ -272,8 +272,8 @@ export class DroneManager {
 
     this.isSimulatingConflict = true
 
-    // --- Collision Encounter 1: Hsinchu Science Park [121.006, 24.787] ---
-    const center1: [number, number] = [121.006, 24.787]
+    // --- Collision Encounter 1: Baoshan Green Zone [121.028, 24.742] ---
+    const center1: [number, number] = [121.028, 24.742]
     d1.currentLonLat = [center1[0] - 0.0030, center1[1] - 0.0005]
     d1.speedKmh = 42
     d1.heading = 80
@@ -294,38 +294,39 @@ export class DroneManager {
       [center1[0] + 0.004, center1[1] + 0.001],
     ]
 
-    // --- Collision Encounter 2: Interchange / Guangfu Rd [121.020, 24.798] ---
+    // --- Collision Encounter 2: Zhudong Erchong Yellow Zone [121.049, 24.771] ---
+    // In Yellow Zone, altitude is strictly simulated at <= 60m (54m vs 56m)
     if (d8 && d6) {
-      const center2: [number, number] = [121.020, 24.798]
+      const center2: [number, number] = [121.049, 24.771]
       // UAV-08 (Police) coming from SSW heading NNE
-      d8.currentLonLat = [center2[0] - 0.0018, center2[1] - 0.0028]
+      d8.currentLonLat = [center2[0] - 0.0015, center2[1] - 0.0025]
       d8.speedKmh = 40
-      d8.heading = 32
-      d8.altitudeAglMeters = 86
+      d8.heading = 35
+      d8.altitudeAglMeters = 54 // Accurate Yellow zone altitude <= 60m
       d8.trail = []
       d8.waypoints = [
-        [center2[0] + 0.0025, center2[1] + 0.0040],
-        [center2[0] - 0.0025, center2[1] - 0.0040],
+        [center2[0] + 0.0025, center2[1] + 0.0030],
+        [center2[0] - 0.0025, center2[1] - 0.0030],
       ]
 
       // UAV-06 (Medical) coming from ENE heading WSW
-      d6.currentLonLat = [center2[0] + 0.0032, center2[1] + 0.0012]
-      d6.speedKmh = 46
-      d6.heading = 248
-      d6.altitudeAglMeters = 88
+      d6.currentLonLat = [center2[0] + 0.0025, center2[1] + 0.0015]
+      d6.speedKmh = 44
+      d6.heading = 225
+      d6.altitudeAglMeters = 56 // Accurate Yellow zone altitude <= 60m
       d6.trail = []
       d6.waypoints = [
-        [center2[0] - 0.0040, center2[1] - 0.0020],
-        [center2[0] + 0.0040, center2[1] + 0.0020],
+        [center2[0] - 0.0030, center2[1] - 0.0020],
+        [center2[0] + 0.0030, center2[1] + 0.0020],
       ]
     }
 
     // Pan map to overview both conflict zones simultaneously
     if (this.map) {
-      const overviewCenter: [number, number] = [121.013, 24.7925]
+      const overviewCenter: [number, number] = [121.038, 24.756]
       this.map.getView().animate({
         center: fromLonLat(overviewCenter),
-        zoom: 14.8,
+        zoom: 13.8,
         duration: 600,
       })
     }
@@ -347,7 +348,7 @@ export class DroneManager {
       this.missionSource.removeFeature(entity.getMissionFeature())
     })
     this.droneMap.clear()
-    this.seedInitialFleet(24.7887, 121.0028)
+    this.seedInitialFleet(24.745, 121.035)
     this.notifyUpdate()
     this.collisionCallbacks.forEach((cb) => cb([]))
   }
@@ -502,9 +503,10 @@ export class DroneManager {
   }
 
   /**
-   * Seed realistic active drone operations in Hsinchu / Science Park / Coast / Dams
+   * Seed realistic active drone operations strictly OUTSIDE No-Fly Zones (禁航區/紅區)
+   * Yellow Zone (限航區 ≤60m) and Green Zone (非管制空域 ≤120m) with accurate legal altitudes.
    */
-  private seedInitialFleet(centerLat: number, centerLon: number): void {
+  private seedInitialFleet(_centerLat?: number, _centerLon?: number): void {
     const fleetData: DroneInfo[] = [
       {
         id: 'UAV-NCHC-01',
@@ -512,24 +514,27 @@ export class DroneManager {
         remoteId: 'CAA-TW-849201',
         model: 'DJI Matrice 350 RTK',
         operator: '國研院國網中心 (NCHC)',
-        missionType: '園區伺服器高壓電塔巡檢',
+        missionType: '寶山研發基地智慧巡檢',
         status: '任務巡檢',
-        latitude: centerLat + 0.0035,
-        longitude: centerLon - 0.002,
-        altitudeAglMeters: 65,
-        altitudeAglFeet: 213,
+        latitude: 24.745,
+        longitude: 121.026,
+        altitudeAglMeters: 68,
+        altitudeAglFeet: 223,
+        airspaceZone: 'green',
+        maxLegalAltitudeMeters: 120,
+        zoneName: '寶山非管制空域',
         speedKmh: 36,
         heading: 45,
         verticalRateMps: 0,
         batteryPercent: 88,
         linkQuality: 98,
         satellites: 26,
-        homeCoordinate: [centerLon, centerLat],
+        homeCoordinate: [121.026, 24.745],
         waypoints: [
-          [centerLon - 0.005, centerLat + 0.002],
-          [centerLon + 0.004, centerLat + 0.006],
-          [centerLon + 0.008, centerLat - 0.001],
-          [centerLon - 0.002, centerLat - 0.004],
+          [121.026, 24.745],
+          [121.031, 24.748],
+          [121.034, 24.741],
+          [121.023, 24.739],
         ],
         trail: [],
         lastSeen: Date.now(),
@@ -540,191 +545,213 @@ export class DroneManager {
         remoteId: 'CAA-TW-710492',
         model: 'Flyby VTOL Express',
         operator: '工研院資通所 (ITRI)',
-        missionType: '竹科B2B緊急晶圓物資遞送',
+        missionType: '寶山至二重緊急物流走廊',
         status: '巡航中',
-        latitude: centerLat - 0.012,
-        longitude: centerLon + 0.015,
-        altitudeAglMeters: 92,
-        altitudeAglFeet: 301,
-        speedKmh: 58,
+        latitude: 24.738,
+        longitude: 121.035,
+        altitudeAglMeters: 72,
+        altitudeAglFeet: 236,
+        airspaceZone: 'green',
+        maxLegalAltitudeMeters: 120,
+        zoneName: '寶山非管制空域',
+        speedKmh: 54,
         heading: 210,
         verticalRateMps: 0,
         batteryPercent: 74,
         linkQuality: 92,
         satellites: 24,
-        homeCoordinate: [centerLon + 0.015, centerLat - 0.012],
+        homeCoordinate: [121.035, 24.738],
         waypoints: [
-          [centerLon + 0.015, centerLat - 0.012],
-          [centerLon + 0.008, centerLat - 0.025],
-          [centerLon - 0.01, centerLat - 0.018],
-          [centerLon + 0.002, centerLat - 0.006],
+          [121.035, 24.738],
+          [121.040, 24.733],
+          [121.031, 24.730],
+          [121.025, 24.735],
         ],
         trail: [],
         lastSeen: Date.now(),
       },
       {
         id: 'UAV-WATER-03',
-        callsign: '寶山水保03號',
+        callsign: '二重環境03號',
         remoteId: 'CAA-TW-938210',
         model: 'Skydio X2D Enterprise',
-        operator: '北區水資源局',
-        missionType: '寶山水庫水質與集水區巡查',
+        operator: '竹縣環保局水保科',
+        missionType: '頭前溪南岸水質生態監測',
         status: '任務巡檢',
-        latitude: 24.745,
-        longitude: 121.035,
-        altitudeAglMeters: 78,
-        altitudeAglFeet: 255,
+        latitude: 24.770,
+        longitude: 121.050,
+        altitudeAglMeters: 48, // Yellow Zone strictly <= 60m
+        altitudeAglFeet: 157,
+        airspaceZone: 'yellow',
+        maxLegalAltitudeMeters: 60,
+        zoneName: '竹縣32 二三重限航區',
         speedKmh: 28,
         heading: 320,
         verticalRateMps: 0,
         batteryPercent: 65,
         linkQuality: 89,
         satellites: 22,
-        homeCoordinate: [121.035, 24.745],
+        homeCoordinate: [121.050, 24.770],
         waypoints: [
-          [121.035, 24.745],
-          [121.042, 24.752],
-          [121.028, 24.758],
-          [121.022, 24.748],
+          [121.050, 24.770],
+          [121.054, 24.772],
+          [121.052, 24.768],
+          [121.046, 24.769],
         ],
         trail: [],
         lastSeen: Date.now(),
       },
       {
         id: 'UAV-COAST-04',
-        callsign: '南寮海巡04號',
+        callsign: '北埔文資04號',
         remoteId: 'CAA-TW-605823',
         model: 'Thunder Tiger VTOL Sirius',
-        operator: '海巡署艦隊分隊',
-        missionType: '新竹漁港外海空域安全巡弋',
+        operator: '文化資產維護組',
+        missionType: '北埔老街文資聚落空拍巡檢',
         status: '巡航中',
-        latitude: 24.852,
-        longitude: 120.922,
-        altitudeAglMeters: 110,
-        altitudeAglFeet: 360,
-        speedKmh: 64,
-        heading: 15,
+        latitude: 24.702,
+        longitude: 121.052,
+        altitudeAglMeters: 52, // Yellow Zone strictly <= 60m
+        altitudeAglFeet: 171,
+        airspaceZone: 'yellow',
+        maxLegalAltitudeMeters: 60,
+        zoneName: '竹縣41 北埔限航區',
+        speedKmh: 42,
+        heading: 75,
         verticalRateMps: 0,
         batteryPercent: 82,
         linkQuality: 95,
         satellites: 25,
-        homeCoordinate: [120.922, 24.852],
+        homeCoordinate: [121.052, 24.702],
         waypoints: [
-          [120.915, 24.84],
-          [120.908, 24.87],
-          [120.935, 24.885],
-          [120.942, 24.855],
+          [121.052, 24.702],
+          [121.055, 24.704],
+          [121.056, 24.699],
+          [121.048, 24.698],
         ],
         trail: [],
         lastSeen: Date.now(),
       },
       {
         id: 'UAV-FIRE-05',
-        callsign: '消防應變05號',
+        callsign: '寶山林防05號',
         remoteId: 'CAA-TW-519284',
         model: 'Autel EVO Max 4T',
-        operator: '新竹市消防局災防中心',
-        missionType: '市區高樓火警紅外線空拍待命',
+        operator: '新竹縣消防局災防中心',
+        missionType: '寶山林野山防熱成像待命',
         status: '定點懸停',
-        latitude: 24.808,
-        longitude: 120.975,
-        altitudeAglMeters: 55,
-        altitudeAglFeet: 180,
-        speedKmh: 4,
+        latitude: 24.735,
+        longitude: 121.018,
+        altitudeAglMeters: 65,
+        altitudeAglFeet: 213,
+        airspaceZone: 'green',
+        maxLegalAltitudeMeters: 120,
+        zoneName: '寶山非管制空域',
+        speedKmh: 6,
         heading: 90,
         verticalRateMps: 0,
         batteryPercent: 91,
         linkQuality: 99,
         satellites: 27,
-        homeCoordinate: [120.975, 24.808],
+        homeCoordinate: [121.018, 24.735],
         waypoints: [
-          [120.975, 24.808],
-          [120.982, 24.812],
-          [120.968, 24.815],
+          [121.018, 24.735],
+          [121.022, 24.738],
+          [121.015, 24.740],
+          [121.012, 24.733],
         ],
         trail: [],
         lastSeen: Date.now(),
       },
       {
         id: 'UAV-MED-06',
-        callsign: '台大生醫06號',
+        callsign: '二重生醫06號',
         remoteId: 'CAA-TW-384192',
         model: 'DJI Inspire 3 RTK',
-        operator: '台大生醫醫院',
-        missionType: '生醫園區急重症檢體冷鏈直送',
+        operator: '生醫急救物流隊',
+        missionType: '二重生醫急重症冷鏈直送',
         status: '任務巡檢',
-        latitude: 24.812,
-        longitude: 121.035,
-        altitudeAglMeters: 85,
-        altitudeAglFeet: 279,
-        speedKmh: 48,
+        latitude: 24.772,
+        longitude: 121.046,
+        altitudeAglMeters: 56, // Yellow Zone strictly <= 60m
+        altitudeAglFeet: 184,
+        airspaceZone: 'yellow',
+        maxLegalAltitudeMeters: 60,
+        zoneName: '竹縣32 二三重限航區',
+        speedKmh: 46,
         heading: 245,
         verticalRateMps: 0,
         batteryPercent: 93,
         linkQuality: 96,
         satellites: 26,
-        homeCoordinate: [121.035, 24.812],
+        homeCoordinate: [121.046, 24.772],
         waypoints: [
-          [121.042, 24.818],
-          [121.025, 24.805],
-          [121.015, 24.795],
-          [121.038, 24.810],
+          [121.046, 24.772],
+          [121.051, 24.773],
+          [121.053, 24.769],
+          [121.047, 24.768],
         ],
         trail: [],
         lastSeen: Date.now(),
       },
       {
         id: 'UAV-GRID-07',
-        callsign: '台電輸電07號',
+        callsign: '峨眉輸電07號',
         remoteId: 'CAA-TW-492816',
         model: '翔儀 VTOL Defender',
         operator: '台灣電力公司供電處',
-        missionType: '新竹超高壓變電所電網熱影像稽查',
+        missionType: '峨眉超高壓電網走廊熱影像稽查',
         status: '巡航中',
-        latitude: 24.768,
-        longitude: 121.052,
-        altitudeAglMeters: 98,
-        altitudeAglFeet: 321,
+        latitude: 24.680,
+        longitude: 121.015,
+        altitudeAglMeters: 95,
+        altitudeAglFeet: 312,
+        airspaceZone: 'green',
+        maxLegalAltitudeMeters: 120,
+        zoneName: '峨眉非管制空域',
         speedKmh: 52,
         heading: 310,
         verticalRateMps: 0,
         batteryPercent: 78,
         linkQuality: 91,
         satellites: 23,
-        homeCoordinate: [121.052, 24.768],
+        homeCoordinate: [121.015, 24.680],
         waypoints: [
-          [121.052, 24.768],
-          [121.038, 24.782],
-          [121.020, 24.770],
-          [121.045, 24.755],
+          [121.015, 24.680],
+          [121.022, 24.685],
+          [121.026, 24.678],
+          [121.012, 24.675],
         ],
         trail: [],
         lastSeen: Date.now(),
       },
       {
         id: 'UAV-POLICE-08',
-        callsign: '警航交管08號',
+        callsign: '二重交管08號',
         remoteId: 'CAA-TW-820155',
         model: 'DJI Matrice 30T',
-        operator: '新竹縣市科技執法組',
-        missionType: '國道一號竹科交流道尖峰車流監控',
+        operator: '竹東分局科技執法組',
+        missionType: '中興路工研院路口車流監控',
         status: '任務巡檢',
-        latitude: 24.792,
-        longitude: 121.012,
-        altitudeAglMeters: 88,
-        altitudeAglFeet: 288,
-        speedKmh: 40,
+        latitude: 24.771,
+        longitude: 121.048,
+        altitudeAglMeters: 54, // Yellow Zone strictly <= 60m
+        altitudeAglFeet: 177,
+        airspaceZone: 'yellow',
+        maxLegalAltitudeMeters: 60,
+        zoneName: '竹縣32 二三重限航區',
+        speedKmh: 38,
         heading: 35,
         verticalRateMps: 0,
         batteryPercent: 86,
         linkQuality: 97,
         satellites: 28,
-        homeCoordinate: [121.012, 24.792],
+        homeCoordinate: [121.048, 24.771],
         waypoints: [
-          [121.012, 24.792],
-          [121.022, 24.805],
-          [121.010, 24.815],
-          [121.005, 24.798],
+          [121.048, 24.771],
+          [121.052, 24.774],
+          [121.054, 24.770],
+          [121.046, 24.770],
         ],
         trail: [],
         lastSeen: Date.now(),
@@ -737,22 +764,25 @@ export class DroneManager {
         operator: '農業部智慧農業示範場',
         missionType: '北埔茶園高光譜病蟲害即時監測',
         status: '定點懸停',
-        latitude: 24.720,
-        longitude: 121.060,
-        altitudeAglMeters: 45,
-        altitudeAglFeet: 147,
+        latitude: 24.695,
+        longitude: 121.070,
+        altitudeAglMeters: 38,
+        altitudeAglFeet: 125,
+        airspaceZone: 'green',
+        maxLegalAltitudeMeters: 120,
+        zoneName: '北埔非管制空域',
         speedKmh: 12,
         heading: 180,
         verticalRateMps: 0,
         batteryPercent: 68,
         linkQuality: 88,
         satellites: 21,
-        homeCoordinate: [121.060, 24.720],
+        homeCoordinate: [121.070, 24.695],
         waypoints: [
-          [121.060, 24.720],
-          [121.065, 24.715],
-          [121.055, 24.718],
-          [121.058, 24.725],
+          [121.070, 24.695],
+          [121.075, 24.690],
+          [121.066, 24.688],
+          [121.068, 24.700],
         ],
         trail: [],
         lastSeen: Date.now(),

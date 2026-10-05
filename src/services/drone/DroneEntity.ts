@@ -20,6 +20,9 @@ export class DroneEntity {
   public missionType: string
   public status: DroneFlightStatus
   public altitudeAglMeters: number
+  public airspaceZone?: 'yellow' | 'green'
+  public maxLegalAltitudeMeters?: number
+  public zoneName?: string
   public speedKmh: number
   public heading: number
   public verticalRateMps: number
@@ -58,6 +61,9 @@ export class DroneEntity {
     this.missionType = initialData.missionType
     this.status = initialData.status
     this.altitudeAglMeters = initialData.altitudeAglMeters
+    this.airspaceZone = initialData.airspaceZone || 'green'
+    this.maxLegalAltitudeMeters = initialData.maxLegalAltitudeMeters || (this.airspaceZone === 'yellow' ? 60 : 120)
+    this.zoneName = initialData.zoneName
     this.speedKmh = initialData.speedKmh
     this.heading = initialData.heading
     this.verticalRateMps = initialData.verticalRateMps
@@ -142,6 +148,9 @@ export class DroneEntity {
       longitude: this.currentLonLat[0],
       altitudeAglMeters: Math.round(this.altitudeAglMeters * 10) / 10,
       altitudeAglFeet: Math.round(this.altitudeAglMeters * 3.28084),
+      airspaceZone: this.airspaceZone,
+      maxLegalAltitudeMeters: this.maxLegalAltitudeMeters,
+      zoneName: this.zoneName,
       speedKmh: Math.round(this.speedKmh * 10) / 10,
       heading: Math.round(this.currentHeading),
       pitchDeg: Math.round(this.pitchDeg * 10) / 10,
