@@ -24,6 +24,9 @@ export interface DroneInfo {
   altitudeAglFeet: number
   speedKmh: number
   heading: number // degrees (0-360)
+  pitchDeg?: number // degrees (-90 to +90, nose up/down)
+  rollDeg?: number // degrees (-180 to +180, bank left/right)
+  yawDeg?: number // degrees (0-360)
   verticalRateMps: number // m/s climb/descent
   batteryPercent: number // 0-100
   linkQuality: number // 0-100%

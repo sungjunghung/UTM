@@ -32,6 +32,10 @@ export class DroneEntity {
   public trail: [number, number][] = []
   public lastSeen: number
 
+  public pitchDeg: number = 0 // degrees (-90 to +90, nose down/up)
+  public rollDeg: number = 0 // degrees (-180 to +180, bank left/right)
+  public yawDeg: number = 0
+
   private currentHeading: number
   private targetHeading: number
   private currentWaypointIndex: number = 0
@@ -140,6 +144,9 @@ export class DroneEntity {
       altitudeAglFeet: Math.round(this.altitudeAglMeters * 3.28084),
       speedKmh: Math.round(this.speedKmh * 10) / 10,
       heading: Math.round(this.currentHeading),
+      pitchDeg: Math.round(this.pitchDeg * 10) / 10,
+      rollDeg: Math.round(this.rollDeg * 10) / 10,
+      yawDeg: Math.round(this.currentHeading),
       verticalRateMps: this.verticalRateMps,
       batteryPercent: Math.max(1, Math.round(this.batteryPercent)),
       linkQuality: this.linkQuality,
@@ -201,8 +208,22 @@ export class DroneEntity {
       }
     }
 
-    // Smooth heading rotation
+    // Heading change rate (turn rate) for bank angle (Roll)
+    const headingDiff = ((this.targetHeading - this.currentHeading + 540) % 360) - 180
     this.currentHeading = lerpAngle(this.currentHeading, this.targetHeading, Math.min(dt * 3.5, 0.2))
+
+    // Dynamic Drone Attitude Physics:
+    // 1. Pitch: Forward acceleration & cruising tilt (multirotor tilts nose-down when moving forward, up to ~15°)
+    const targetPitch = this.status === '定點懸停'
+      ? (Math.sin(Date.now() / 800) * 1.2) // slight hover wind sway
+      : -Math.min(18, (this.speedKmh / 45) * 12 + (Math.sin(Date.now() / 500) * 1.5))
+    this.pitchDeg += (targetPitch - this.pitchDeg) * Math.min(dt * 4, 0.3)
+
+    // 2. Roll: Bank angle proportional to turn rate (banking into turn, up to ±20°)
+    const targetRoll = this.status === '定點懸停'
+      ? (Math.cos(Date.now() / 900) * 1.2)
+      : Math.max(-25, Math.min(25, headingDiff * 0.45))
+    this.rollDeg += (targetRoll - this.rollDeg) * Math.min(dt * 4, 0.3)
 
     // Tiny realistic atmospheric altitude turbulence (±0.05m)
     this.altitudeAglMeters += (Math.random() - 0.5) * 0.04

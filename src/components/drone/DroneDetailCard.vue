@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { ref, computed } from 'vue'
 import MaterialIcon from '../MaterialIcon.vue'
+import DroneAttitudeIndicator from './DroneAttitudeIndicator.vue'
 import type { DroneInfo } from '../../services/drone/types'
 
 const props = defineProps<{
@@ -12,6 +13,8 @@ const emit = defineEmits<{
   (e: 'close'): void
   (e: 'toggleFollow'): void
 }>()
+
+const showAttitude = ref(true)
 
 const isAltitudeLegal = computed(() => {
   return (props.drone?.altitudeAglMeters || 0) <= 120
@@ -90,14 +93,68 @@ const batteryBg = computed(() => {
         </button>
       </div>
 
-      <!-- Mission Banner -->
+      <!-- Mission Banner & Attitude Display Toggle -->
       <div class="px-3.5 py-2 bg-slate-800/80 border-b border-slate-700/60 flex items-center justify-between text-xs">
         <div class="flex items-center gap-1.5 truncate">
           <MaterialIcon name="assignment" :size="15" class="text-cyan-400 shrink-0" />
           <span class="text-slate-300 text-[11px] truncate">{{ drone.missionType }}</span>
         </div>
-        <div class="badge badge-xs px-2 py-1 font-semibold shrink-0" :class="drone.status === '定點懸停' ? 'badge-warning' : 'badge-accent'">
-          {{ drone.status }}
+        <div class="flex items-center gap-2">
+          <button
+            class="btn btn-xs rounded-lg px-2 h-6 min-h-0 font-medium transition-all"
+            :class="showAttitude ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40' : 'btn-ghost text-slate-400 text-[10px]'"
+            title="開關姿態水平儀"
+            @click="showAttitude = !showAttitude"
+          >
+            <MaterialIcon name="explore" :size="13" />
+            <span>姿態儀</span>
+          </button>
+          <div class="badge badge-xs px-2 py-1 font-semibold shrink-0" :class="drone.status === '定點懸停' ? 'badge-warning' : 'badge-accent'">
+            {{ drone.status }}
+          </div>
+        </div>
+      </div>
+
+      <!-- Drone Flight Attitude Indicator (ADI / Artificial Horizon HUD) -->
+      <div
+        v-if="showAttitude"
+        class="p-3 bg-slate-950/80 border-b border-slate-800 flex items-center justify-around gap-3"
+      >
+        <DroneAttitudeIndicator
+          :pitch-deg="drone.pitchDeg ?? 0"
+          :roll-deg="drone.rollDeg ?? 0"
+          :yaw-deg="drone.yawDeg ?? drone.heading"
+          :size="130"
+        />
+
+        <!-- Attitude Telemetry Pitch / Roll / Vertical Rate Data Readout -->
+        <div class="flex flex-col gap-1.5 text-xs font-mono min-w-0 flex-1">
+          <div class="flex items-center justify-between px-2 py-1 rounded-lg bg-slate-800/60 border border-slate-700/50">
+            <span class="text-slate-400 text-[10px]">俯仰 (Pitch)</span>
+            <span
+              class="font-bold"
+              :class="(drone.pitchDeg || 0) < -15 ? 'text-amber-400' : 'text-cyan-300'"
+            >
+              {{ (drone.pitchDeg || 0) > 0 ? '+' : '' }}{{ (drone.pitchDeg || 0).toFixed(1) }}°
+            </span>
+          </div>
+
+          <div class="flex items-center justify-between px-2 py-1 rounded-lg bg-slate-800/60 border border-slate-700/50">
+            <span class="text-slate-400 text-[10px]">橫滾 (Roll)</span>
+            <span
+              class="font-bold"
+              :class="Math.abs(drone.rollDeg || 0) > 20 ? 'text-amber-400' : 'text-cyan-300'"
+            >
+              {{ (drone.rollDeg || 0) > 0 ? '+' : '' }}{{ (drone.rollDeg || 0).toFixed(1) }}°
+            </span>
+          </div>
+
+          <div class="flex items-center justify-between px-2 py-1 rounded-lg bg-slate-800/60 border border-slate-700/50">
+            <span class="text-slate-400 text-[10px]">爬升率 (V/S)</span>
+            <span class="font-bold text-slate-200">
+              {{ (drone.verticalRateMps || 0) > 0 ? '+' : '' }}{{ (drone.verticalRateMps || 0).toFixed(1) }} m/s
+            </span>
+          </div>
         </div>
       </div>
 
