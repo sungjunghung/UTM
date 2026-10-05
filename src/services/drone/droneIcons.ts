@@ -4,31 +4,49 @@ import { Icon, Style, Text, Fill, Stroke, Circle as CircleStyle } from 'ol/style
  * Top-down Multirotor Drone (Quadcopter) SVG pointing North (Up)
  */
 function getDroneSvg(bodyColor: string, rotorColor: string): string {
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 36 36" width="36" height="36">
-    <!-- 4 Diagonal Rotor Arms -->
-    <line x1="8" y1="8" x2="28" y2="28" stroke="#1e293b" stroke-width="2.5" stroke-linecap="round" />
-    <line x1="8" y1="28" x2="28" y2="8" stroke="#1e293b" stroke-width="2.5" stroke-linecap="round" />
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 44 48" width="44" height="48">
+    <defs>
+      <!-- Forward Searchlight Beam Gradient (Heading / Nose Indicator) -->
+      <linearGradient id="headlightBeam" x1="0%" y1="100%" x2="0%" y2="0%">
+        <stop offset="0%" stop-color="${rotorColor}" stop-opacity="0.6" />
+        <stop offset="60%" stop-color="${rotorColor}" stop-opacity="0.25" />
+        <stop offset="100%" stop-color="${rotorColor}" stop-opacity="0.0" />
+      </linearGradient>
+    </defs>
 
-    <!-- 4 Rotor Discs with high-speed blur look -->
-    <circle cx="8" cy="8" r="5" fill="none" stroke="${rotorColor}" stroke-width="1.5" opacity="0.85" stroke-dasharray="3 2" />
-    <circle cx="28" cy="8" r="5" fill="none" stroke="${rotorColor}" stroke-width="1.5" opacity="0.85" stroke-dasharray="3 2" />
-    <circle cx="8" cy="28" r="5" fill="none" stroke="${rotorColor}" stroke-width="1.5" opacity="0.85" stroke-dasharray="3 2" />
-    <circle cx="28" cy="28" r="5" fill="none" stroke="${rotorColor}" stroke-width="1.5" opacity="0.85" stroke-dasharray="3 2" />
+    <!-- Dynamic Forward Projection Searchlight Cone (Nose Direction) -->
+    <polygon points="22,12 8,0 36,0" fill="url(#headlightBeam)" />
+
+    <!-- 4 Diagonal Rotor Arms -->
+    <line x1="12" y1="20" x2="32" y2="40" stroke="#0f172a" stroke-width="3" stroke-linecap="round" />
+    <line x1="12" y1="40" x2="32" y2="20" stroke="#0f172a" stroke-width="3" stroke-linecap="round" />
+
+    <!-- 4 High-speed Spinning Rotor Discs -->
+    <circle cx="12" cy="20" r="6" fill="none" stroke="${rotorColor}" stroke-width="1.8" opacity="0.85" stroke-dasharray="3 2" />
+    <circle cx="32" cy="20" r="6" fill="none" stroke="${rotorColor}" stroke-width="1.8" opacity="0.85" stroke-dasharray="3 2" />
+    <circle cx="12" cy="40" r="6" fill="none" stroke="${rotorColor}" stroke-width="1.8" opacity="0.85" stroke-dasharray="3 2" />
+    <circle cx="32" cy="40" r="6" fill="none" stroke="${rotorColor}" stroke-width="1.8" opacity="0.85" stroke-dasharray="3 2" />
 
     <!-- Motor Mount Hubs -->
-    <circle cx="8" cy="8" r="2" fill="#0f172a" stroke="${bodyColor}" stroke-width="1" />
-    <circle cx="28" cy="8" r="2" fill="#0f172a" stroke="${bodyColor}" stroke-width="1" />
-    <circle cx="8" cy="28" r="2" fill="#0f172a" stroke="${bodyColor}" stroke-width="1" />
-    <circle cx="28" cy="28" r="2" fill="#0f172a" stroke="${bodyColor}" stroke-width="1" />
+    <circle cx="12" cy="20" r="2.5" fill="#0f172a" stroke="${bodyColor}" stroke-width="1.2" />
+    <circle cx="32" cy="20" r="2.5" fill="#0f172a" stroke="${bodyColor}" stroke-width="1.2" />
+    <circle cx="12" cy="40" r="2.5" fill="#0f172a" stroke="${bodyColor}" stroke-width="1.2" />
+    <circle cx="32" cy="40" r="2.5" fill="#0f172a" stroke="${bodyColor}" stroke-width="1.2" />
 
-    <!-- Center Fuselage Body (X-frame pod) -->
-    <rect x="13" y="11" width="10" height="14" rx="3" fill="${bodyColor}" stroke="#0f172a" stroke-width="1.2" />
+    <!-- Center Fuselage Body (High-tech aerodynamic pod) -->
+    <rect x="17" y="23" width="10" height="15" rx="3.5" fill="${bodyColor}" stroke="#0f172a" stroke-width="1.5" />
 
-    <!-- Front Directional Nose Cone Indicator (Points UP) -->
-    <polygon points="18,6 14,11 22,11" fill="${bodyColor}" stroke="#0f172a" stroke-width="1" />
+    <!-- Prominent Directional Nose Cone (機頭箭頭) -->
+    <polygon points="22,14 16,23 28,23" fill="#ffffff" stroke="#0f172a" stroke-width="1.2" />
+    <polygon points="22,17 18,22 26,22" fill="${bodyColor}" />
 
-    <!-- Center Sensor / Gimbal Eye -->
-    <circle cx="18" cy="18" r="2.5" fill="#0f172a" stroke="#ffffff" stroke-width="0.8" />
+    <!-- Dual Ultra-bright Front Navigation Headlights (雙前探照燈) -->
+    <circle cx="17.5" cy="18" r="1.5" fill="#ffffff" stroke="#38bdf8" stroke-width="0.8" />
+    <circle cx="26.5" cy="18" r="1.5" fill="#ffffff" stroke="#38bdf8" stroke-width="0.8" />
+
+    <!-- Center 4K Gimbal Camera Eye -->
+    <circle cx="22" cy="30" r="2.5" fill="#0f172a" stroke="#ffffff" stroke-width="1" />
+    <circle cx="22" cy="30" r="1" fill="#38bdf8" />
   </svg>`
 
   return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`

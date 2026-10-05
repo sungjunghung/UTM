@@ -238,6 +238,9 @@ export class DroneEntity {
       geom.setCoordinates(fromLonLat(this.currentLonLat))
     }
 
+    // Continuously update icon rotation (機頭動態轉向)
+    this.updateStyle()
+
     // Append to trail
     this.appendTrailPoint([this.currentLonLat[0], this.currentLonLat[1]])
     this.updateTrailGeometry()
