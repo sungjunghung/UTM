@@ -8,6 +8,7 @@ import { AircraftManager } from '../../services/aircraft/AircraftManager'
 import type { AircraftInfo } from '../../services/aircraft/types'
 import { DroneManager } from '../../services/drone/DroneManager'
 import type { DroneInfo } from '../../services/drone/types'
+import type { CollisionRisk } from '../../services/drone/collisionTypes'
 import MapToolbar from './MapToolbar.vue'
 import MapStatusOverlay from './MapStatusOverlay.vue'
 import AircraftDetailCard from '../aircraft/AircraftDetailCard.vue'
@@ -44,6 +45,8 @@ const showTrails = ref(true)
 const droneList = ref<DroneInfo[]>([])
 const selectedDrone = ref<DroneInfo | null>(null)
 const isFollowingDrone = ref(false)
+const collisionRisks = ref<CollisionRisk[]>([])
+const isSimulatingConflict = ref(false)
 // Airspace visibility state (Direct toggles on top bar)
 const showAircraft = ref(true)
 const showDrones = ref(true)
@@ -188,6 +191,10 @@ onMounted(() => {
     droneManager.onFollowChange((following) => {
       isFollowingDrone.value = following
     })
+
+    droneManager.onCollisionAlerts((risks) => {
+      collisionRisks.value = risks
+    })
   }
 
   // 3. Listen to Map events
@@ -321,6 +328,23 @@ function handleFocusDroneZone() {
   showToast('已聚焦新竹國網中心無人機空域')
 }
 
+function handleTriggerConflictSimulation() {
+  isSimulatingConflict.value = true
+  droneManager?.triggerConflictSimulation()
+  showToast('⚠️ 已啟動航向交會碰撞預警模擬！請注意地圖 CPA 衝突射線與倒數')
+}
+
+function handleResetConflictSimulation() {
+  isSimulatingConflict.value = false
+  droneManager?.resetSimulation()
+  showToast('已重設無人機航線為標準巡檢模式')
+}
+
+function handleFocusCollision(coord: [number, number]) {
+  mapManager?.flyTo(coord, 16)
+  showToast('已鎖定至 CPA 預測衝突交會點')
+}
+
 function handleRefreshAircraft() {
   aircraftManager?.start()
   showToast('正在重新載入空域航班...')
@@ -412,9 +436,14 @@ function showToast(msg: string) {
           <DroneWidget
             :drone-list="droneList"
             :show-drones="showDrones"
+            :collision-risks="collisionRisks"
+            :is-simulating-conflict="isSimulatingConflict"
             @select-drone="handleSelectDrone"
             @toggle-drones="handleToggleDrones"
             @focus-drone-zone="handleFocusDroneZone"
+            @trigger-conflict="handleTriggerConflictSimulation"
+            @reset-conflict="handleResetConflictSimulation"
+            @focus-collision="handleFocusCollision"
           />
         </div>
 

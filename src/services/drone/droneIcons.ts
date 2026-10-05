@@ -65,20 +65,52 @@ export function createDroneStyle(
   altitudeMeters: number,
   label: string,
   isSelected: boolean = false,
-  isHovered: boolean = false
+  isHovered: boolean = false,
+  alertSeverity: 'clear' | 'advisory' | 'warning' | 'critical' = 'clear'
 ): Style[] {
-  const colors = isSelected
-    ? { body: '#06b6d4', rotor: '#38bdf8' }
-    : getDroneAltitudeColor(altitudeMeters)
+  let colors: { body: string; rotor: string }
+  if (alertSeverity === 'critical') {
+    colors = { body: '#ef4444', rotor: '#f87171' }
+  } else if (alertSeverity === 'warning') {
+    colors = { body: '#f97316', rotor: '#fb923c' }
+  } else if (alertSeverity === 'advisory') {
+    colors = { body: '#eab308', rotor: '#facc15' }
+  } else if (isSelected) {
+    colors = { body: '#06b6d4', rotor: '#38bdf8' }
+  } else {
+    colors = getDroneAltitudeColor(altitudeMeters)
+  }
 
   const src = getCachedDroneSvg(colors.body, colors.rotor)
   const rotation = (heading * Math.PI) / 180
-  const scale = isSelected ? 1.3 : isHovered ? 1.2 : 1.0
+  const scale = alertSeverity === 'critical' ? 1.35 : isSelected ? 1.3 : isHovered ? 1.2 : 1.0
 
   const styles: Style[] = []
 
-  // 1. Halo ring for selected or hovered drone
-  if (isSelected) {
+  // 1. Halo ring for selected, hovered, or collision alert drone
+  if (alertSeverity === 'critical') {
+    styles.push(
+      new Style({
+        image: new CircleStyle({
+          radius: 25,
+          stroke: new Stroke({ color: '#ef4444', width: 2.5, lineDash: [5, 3] }),
+          fill: new Fill({ color: 'rgba(239, 68, 68, 0.28)' }),
+        }),
+        zIndex: 110,
+      })
+    )
+  } else if (alertSeverity === 'warning') {
+    styles.push(
+      new Style({
+        image: new CircleStyle({
+          radius: 23,
+          stroke: new Stroke({ color: '#f97316', width: 2, lineDash: [4, 4] }),
+          fill: new Fill({ color: 'rgba(249, 115, 22, 0.22)' }),
+        }),
+        zIndex: 105,
+      })
+    )
+  } else if (isSelected) {
     styles.push(
       new Style({
         image: new CircleStyle({

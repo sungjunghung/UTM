@@ -1,20 +1,28 @@
 import type OlMap from 'ol/Map'
 import VectorLayer from 'ol/layer/Vector'
 import VectorSource from 'ol/source/Vector'
+import Feature from 'ol/Feature'
+import Point from 'ol/geom/Point'
+import LineString from 'ol/geom/LineString'
 import { fromLonLat } from 'ol/proj'
 import type { EventsKey } from 'ol/events'
 import { DroneEntity } from './DroneEntity'
 import type { DroneInfo, DroneManagerOptions } from './types'
+import type { CollisionRisk } from './collisionTypes'
+import { calculateCpaRisk } from './collisionService'
+import { createConflictPointStyle, createConflictVectorStyle } from './conflictStyles'
 
 export class DroneManager {
   private map: OlMap | null = null
   private droneSource = new VectorSource()
   private trailSource = new VectorSource()
   private missionSource = new VectorSource()
+  private conflictSource = new VectorSource()
 
   private droneLayer: VectorLayer<VectorSource>
   private trailLayer: VectorLayer<VectorSource>
   private missionLayer: VectorLayer<VectorSource>
+  private conflictLayer: VectorLayer<VectorSource>
 
   private droneMap = new Map<string, DroneEntity>()
   private selectedDroneId: string | null = null
@@ -27,11 +35,16 @@ export class DroneManager {
   private lastFrameTime: number = 0
   private isRunning: boolean = false
 
+  // CPA Collision Detection State
+  private collisionRisks: CollisionRisk[] = []
+  private isSimulatingConflict: boolean = false
+
   // Callbacks
   private updateCallbacks: Set<(list: DroneInfo[]) => void> = new Set()
   private selectCallbacks: Set<(info: DroneInfo | null) => void> = new Set()
   private selectedMoveCallbacks: Set<(lonLat: [number, number], info: DroneInfo) => void> = new Set()
   private followChangeCallbacks: Set<(following: boolean) => void> = new Set()
+  private collisionCallbacks: Set<(risks: CollisionRisk[]) => void> = new Set()
 
   constructor(options: DroneManagerOptions = {}) {
     this.trailLayer = new VectorLayer({
@@ -46,6 +59,11 @@ export class DroneManager {
       visible: options.showMissionPaths ?? true,
     })
 
+    this.conflictLayer = new VectorLayer({
+      source: this.conflictSource,
+      zIndex: 55, // Render above mission/trails, below drone reticles
+    })
+
     this.droneLayer = new VectorLayer({
       source: this.droneSource,
       zIndex: 45,
@@ -58,6 +76,7 @@ export class DroneManager {
     this.map = map
     this.map.addLayer(this.missionLayer)
     this.map.addLayer(this.trailLayer)
+    this.map.addLayer(this.conflictLayer)
     this.map.addLayer(this.droneLayer)
 
     // Single click on drone
@@ -137,6 +156,7 @@ export class DroneManager {
 
     if (this.map) {
       this.map.removeLayer(this.droneLayer)
+      this.map.removeLayer(this.conflictLayer)
       this.map.removeLayer(this.trailLayer)
       this.map.removeLayer(this.missionLayer)
       this.map = null
@@ -146,6 +166,12 @@ export class DroneManager {
     this.droneSource.clear()
     this.trailSource.clear()
     this.missionSource.clear()
+    this.conflictSource.clear()
+    this.updateCallbacks.clear()
+    this.selectCallbacks.clear()
+    this.selectedMoveCallbacks.clear()
+    this.followChangeCallbacks.clear()
+    this.collisionCallbacks.clear()
   }
 
   public selectDrone(id: string | null): void {
@@ -205,19 +231,100 @@ export class DroneManager {
     return () => this.followChangeCallbacks.delete(cb)
   }
 
+  public onCollisionAlerts(cb: (risks: CollisionRisk[]) => void): () => void {
+    this.collisionCallbacks.add(cb)
+    cb(this.collisionRisks)
+    return () => this.collisionCallbacks.delete(cb)
+  }
+
   public getDroneList(): DroneInfo[] {
     const list: DroneInfo[] = []
     this.droneMap.forEach((entity) => list.push(entity.getInfo()))
     return list
   }
 
+  public getCollisionRisks(): CollisionRisk[] {
+    return this.collisionRisks
+  }
+
+  public isConflictSimulationActive(): boolean {
+    return this.isSimulatingConflict
+  }
+
   public toggleLayer(visible: boolean): void {
     this.droneLayer.setVisible(visible)
     this.trailLayer.setVisible(visible)
     this.missionLayer.setVisible(visible)
+    this.conflictLayer.setVisible(visible)
+  }
+
+  /**
+   * Interactive Simulator: Trigger head-on or intersecting collision path between UAV-01 and UAV-02
+   */
+  public triggerConflictSimulation(): void {
+    const d1 = this.droneMap.get('UAV-NCHC-01')
+    const d2 = this.droneMap.get('UAV-ITRI-02')
+    if (!d1 || !d2) return
+
+    this.isSimulatingConflict = true
+
+    // Center collision encounter point near Hsinchu Science Park / NCHC
+    const centerPoint: [number, number] = [121.006, 24.787]
+
+    // Set UAV-01 coming from West-Southwest heading East-Northeast
+    d1.currentLonLat = [centerPoint[0] - 0.0035, centerPoint[1] - 0.0005]
+    d1.speedKmh = 42
+    d1.heading = 80
+    d1.altitudeAglMeters = 72
+    d1.waypoints = [
+      [centerPoint[0] + 0.004, centerPoint[1] + 0.001],
+      [centerPoint[0] - 0.004, centerPoint[1] - 0.001],
+    ]
+
+    // Set UAV-02 coming from East-Northeast heading West-Southwest at nearly identical altitude
+    d2.currentLonLat = [centerPoint[0] + 0.0035, centerPoint[1] + 0.0005]
+    d2.speedKmh = 45
+    d2.heading = 260
+    d2.altitudeAglMeters = 74
+    d2.waypoints = [
+      [centerPoint[0] - 0.004, centerPoint[1] - 0.001],
+      [centerPoint[0] + 0.004, centerPoint[1] + 0.001],
+    ]
+
+    // Pan map to conflict zone
+    if (this.map) {
+      this.map.getView().animate({
+        center: fromLonLat(centerPoint),
+        zoom: 15.5,
+        duration: 500,
+      })
+    }
+  }
+
+  /**
+   * Reset drones back to standard peacetime autonomous mission patrols
+   */
+  public resetSimulation(): void {
+    this.isSimulatingConflict = false
+    this.conflictSource.clear()
+    this.collisionRisks = []
+    this.droneMap.forEach((d) => d.setAlertSeverity('clear'))
+
+    // Re-seed fleet
+    this.droneMap.forEach((entity) => {
+      this.droneSource.removeFeature(entity.getDroneFeature())
+      this.trailSource.removeFeature(entity.getTrailFeature())
+      this.missionSource.removeFeature(entity.getMissionFeature())
+    })
+    this.droneMap.clear()
+    this.seedInitialFleet(24.7887, 121.0028)
+    this.notifyUpdate()
+    this.collisionCallbacks.forEach((cb) => cb([]))
   }
 
   private startAnimationLoop(): void {
+    let lastCpaCalculationTime = 0
+
     const loop = (timestamp: number) => {
       if (!this.isRunning) return
 
@@ -225,10 +332,16 @@ export class DroneManager {
       const dt = Math.min((timestamp - this.lastFrameTime) / 1000, 0.1)
       this.lastFrameTime = timestamp
 
-      // Advance physics and waypoints of every drone
+      // 1. Advance physics and waypoints of every drone (60 FPS)
       this.droneMap.forEach((entity) => {
         entity.stepPhysics(dt)
       })
+
+      // 2. Real-time Predictive CPA Collision Avoidance Calculation (~10 Hz)
+      if (timestamp - lastCpaCalculationTime > 100) {
+        lastCpaCalculationTime = timestamp
+        this.runCollisionDetection()
+      }
 
       this.map?.render()
 
@@ -257,6 +370,87 @@ export class DroneManager {
     this.animationFrameId = requestAnimationFrame(loop)
   }
 
+  /**
+   * Multi-drone pair-wise CPA calculation & GIS vector overlay update
+   */
+  private runCollisionDetection(): void {
+    const entities = Array.from(this.droneMap.values())
+    const risks: CollisionRisk[] = []
+    const alertMap = new Map<string, 'clear' | 'advisory' | 'warning' | 'critical'>()
+
+    // Initialize all to clear
+    entities.forEach((e) => alertMap.set(e.id, 'clear'))
+
+    // Pairwise calculation: O(N^2 / 2)
+    for (let i = 0; i < entities.length; i++) {
+      for (let j = i + 1; j < entities.length; j++) {
+        const a = entities[i]
+        const b = entities[j]
+        const risk = calculateCpaRisk(a, b, 30)
+        if (risk) {
+          risks.push(risk)
+
+          // Update drone alert severity to worst case
+          const rank = { clear: 0, advisory: 1, warning: 2, critical: 3 }
+          const curA = alertMap.get(a.id) || 'clear'
+          const curB = alertMap.get(b.id) || 'clear'
+          if (rank[risk.severity] > rank[curA]) alertMap.set(a.id, risk.severity)
+          if (rank[risk.severity] > rank[curB]) alertMap.set(b.id, risk.severity)
+        }
+      }
+    }
+
+    // Apply alert status to drone entities for map halo & styling
+    entities.forEach((e) => {
+      const sev = alertMap.get(e.id) || 'clear'
+      e.setAlertSeverity(sev)
+    })
+
+    this.collisionRisks = risks
+    this.updateConflictLayerFeatures(risks)
+    this.collisionCallbacks.forEach((cb) => cb(risks))
+  }
+
+  /**
+   * Render dynamic collision rays, conflict points, and CPA countdowns on OpenLayers map
+   */
+  private updateConflictLayerFeatures(risks: CollisionRisk[]): void {
+    this.conflictSource.clear()
+
+    risks.forEach((risk) => {
+      const dA = this.droneMap.get(risk.droneAId)
+      const dB = this.droneMap.get(risk.droneBId)
+      if (!dA || !dB) return
+
+      const posA = fromLonLat(dA.currentLonLat)
+      const posB = fromLonLat(dB.currentLonLat)
+      const posCpa = fromLonLat(risk.cpaCoordinate)
+
+      // 1. Predictive Trajectory Vector Ray for Drone A to CPA point
+      const lineAFeature = new Feature({
+        geometry: new LineString([posA, posCpa]),
+      })
+      lineAFeature.setStyle(createConflictVectorStyle(risk.severity))
+      this.conflictSource.addFeature(lineAFeature)
+
+      // 2. Predictive Trajectory Vector Ray for Drone B to CPA point
+      const lineBFeature = new Feature({
+        geometry: new LineString([posB, posCpa]),
+      })
+      lineBFeature.setStyle(createConflictVectorStyle(risk.severity))
+      this.conflictSource.addFeature(lineBFeature)
+
+      // 3. Predicted Collision Point / Reticle marker with countdown & distance tag
+      const pointFeature = new Feature({
+        geometry: new Point(posCpa),
+      })
+      pointFeature.setStyle(
+        createConflictPointStyle(risk.severity, risk.timeToCpaSeconds, risk.cpaDistanceMeters)
+      )
+      this.conflictSource.addFeature(pointFeature)
+    })
+  }
+
   private clearHover(): void {
     if (this.hoveredDroneId && this.droneMap.has(this.hoveredDroneId)) {
       this.droneMap.get(this.hoveredDroneId)!.setHovered(false)
@@ -270,6 +464,11 @@ export class DroneManager {
 
   private notifyFollowChange(following: boolean): void {
     this.followChangeCallbacks.forEach((cb) => cb(following))
+  }
+
+  private notifyUpdate(): void {
+    const list = this.getDroneList()
+    this.updateCallbacks.forEach((cb) => cb(list))
   }
 
   /**

@@ -38,6 +38,7 @@ export class DroneEntity {
   private hoverTimer: number = 0
   private isSelected: boolean = false
   private isHovered: boolean = false
+  public alertSeverity: 'clear' | 'advisory' | 'warning' | 'critical' = 'clear'
 
   // OpenLayers Features
   private droneFeature: Feature<Point>
@@ -115,6 +116,12 @@ export class DroneEntity {
   public setHovered(hovered: boolean): void {
     if (this.isHovered === hovered) return
     this.isHovered = hovered
+    this.updateStyle()
+  }
+
+  public setAlertSeverity(severity: 'clear' | 'advisory' | 'warning' | 'critical'): void {
+    if (this.alertSeverity === severity) return
+    this.alertSeverity = severity
     this.updateStyle()
   }
 
@@ -237,7 +244,7 @@ export class DroneEntity {
   private updateStyle(): void {
     const label = `${this.callsign}\n${Math.round(this.altitudeAglMeters)}m AGL`
     this.droneFeature.setStyle(
-      createDroneStyle(this.currentHeading, this.altitudeAglMeters, label, this.isSelected, this.isHovered)
+      createDroneStyle(this.currentHeading, this.altitudeAglMeters, label, this.isSelected, this.isHovered, this.alertSeverity)
     )
   }
 
