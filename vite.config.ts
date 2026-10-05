@@ -37,6 +37,28 @@ function adsbCachePlugin(): Plugin {
           return
         }
 
+        if (req.url && req.url.startsWith('/api/caa/')) {
+          const upstreamPath = req.url.replace(/^\/api\/caa/, '')
+          const caaUrl = `https://dronegis.caa.gov.tw/server/rest/services/Hosted/UAV_fs_ryg/FeatureServer/0${upstreamPath}`
+          try {
+            const upstreamRes = await fetch(caaUrl, {
+              headers: {
+                'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                Referer: 'https://dronegis.caa.gov.tw/',
+                Accept: 'application/json',
+              },
+            })
+            const body = await upstreamRes.text()
+            res.setHeader('Content-Type', 'application/json')
+            res.setHeader('Cache-Control', 'public, max-age=300')
+            res.end(body)
+          } catch (err: any) {
+            res.statusCode = 502
+            res.end(JSON.stringify({ error: err.message }))
+          }
+          return
+        }
+
         if (!req.url || !req.url.startsWith('/api/adsb/')) {
           return next()
         }

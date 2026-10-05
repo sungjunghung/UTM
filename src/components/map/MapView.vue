@@ -9,6 +9,8 @@ import type { AircraftInfo } from '../../services/aircraft/types'
 import { DroneManager } from '../../services/drone/DroneManager'
 import type { DroneInfo } from '../../services/drone/types'
 import type { CollisionRisk } from '../../services/drone/collisionTypes'
+import { AirspaceManager } from '../../services/airspace/AirspaceManager'
+import type { AirspaceZoneInfo } from '../../services/airspace/types'
 import MapToolbar from './MapToolbar.vue'
 import MapStatusOverlay from './MapStatusOverlay.vue'
 import AircraftDetailCard from '../aircraft/AircraftDetailCard.vue'
@@ -16,16 +18,21 @@ import AircraftRadarWidget from '../aircraft/AircraftRadarWidget.vue'
 import DroneDetailCard from '../drone/DroneDetailCard.vue'
 import DroneWidget from '../drone/DroneWidget.vue'
 import CollisionAlertBanner from '../drone/CollisionAlertBanner.vue'
+import AirspaceWidget from '../airspace/AirspaceWidget.vue'
+import AirspaceDetailCard from '../airspace/AirspaceDetailCard.vue'
 import MaterialIcon from '../MaterialIcon.vue'
 
 const mapTarget = ref<HTMLDivElement | null>(null)
 const detailOverlayTarget = ref<HTMLDivElement | null>(null)
 const droneOverlayTarget = ref<HTMLDivElement | null>(null)
+const airspaceOverlayTarget = ref<HTMLDivElement | null>(null)
 let mapManager: MapManager | null = null
 let aircraftManager: AircraftManager | null = null
 let droneManager: DroneManager | null = null
+let airspaceManager: AirspaceManager | null = null
 let detailOverlay: Overlay | null = null
 let droneOverlay: Overlay | null = null
+let airspaceOverlay: Overlay | null = null
 
 // Reactive state
 const activeLayer = ref<BaseLayerType>('osm-dark')
@@ -48,9 +55,13 @@ const selectedDrone = ref<DroneInfo | null>(null)
 const isFollowingDrone = ref(false)
 const collisionRisks = ref<CollisionRisk[]>([])
 const isSimulatingConflict = ref(false)
-// Airspace visibility state (Direct toggles on top bar)
+
+// Airspace state (Civil Aeronautics Administration CAA UAV Red/Yellow Zones)
 const showAircraft = ref(true)
 const showDrones = ref(true)
+const showAirspace = ref(true)
+const isAirspaceLoading = ref(false)
+const selectedAirspace = ref<AirspaceZoneInfo | null>(null)
 
 let unsubPointer: (() => void) | null = null
 let unsubClick: (() => void) | null = null
@@ -196,6 +207,33 @@ onMounted(() => {
     droneManager.onCollisionAlerts((risks) => {
       collisionRisks.value = risks
     })
+
+    // 4. Instantiate OOP AirspaceManager for CAA Drone No-Fly & Restricted Zones
+    airspaceManager = new AirspaceManager(showAirspace.value)
+    airspaceManager.attachToMap(olMap)
+
+    if (airspaceOverlayTarget.value) {
+      airspaceOverlay = new Overlay({
+        element: airspaceOverlayTarget.value,
+        positioning: 'bottom-center',
+        offset: [0, -14],
+        stopEvent: true,
+      })
+      olMap.addOverlay(airspaceOverlay)
+    }
+
+    airspaceManager.onLoading((loading) => {
+      isAirspaceLoading.value = loading
+    })
+
+    airspaceManager.onSelect((zone) => {
+      selectedAirspace.value = zone
+      if (zone && zone.coordinate && airspaceOverlay) {
+        airspaceOverlay.setPosition(fromLonLat(zone.coordinate))
+      } else if (!zone && airspaceOverlay) {
+        airspaceOverlay.setPosition(undefined)
+      }
+    })
   }
 
   // 3. Listen to Map events
@@ -248,9 +286,15 @@ onUnmounted(() => {
     mapManager.getMap()?.removeOverlay(droneOverlay)
     droneOverlay = null
   }
+  if (airspaceOverlay && mapManager) {
+    mapManager.getMap()?.removeOverlay(airspaceOverlay)
+    airspaceOverlay = null
+  }
+  airspaceManager?.detach()
   droneManager?.destroy()
   aircraftManager?.destroy()
   mapManager?.destroy()
+  airspaceManager = null
   droneManager = null
   aircraftManager = null
   mapManager = null
@@ -344,6 +388,25 @@ function handleResetConflictSimulation() {
 function handleFocusCollision(coord: [number, number]) {
   mapManager?.flyTo(coord, 16)
   showToast('已鎖定至 CPA 預測衝突交會點')
+}
+
+// Airspace (CAA No-Fly / Restricted Zones) Controls
+function handleToggleAirspace() {
+  showAirspace.value = !showAirspace.value
+  airspaceManager?.setVisible(showAirspace.value)
+  if (!showAirspace.value) {
+    handleCloseAirspaceDetail()
+    showToast('已隱藏民航局禁限航區圖層')
+  } else {
+    showToast('已開啟民航局禁限航區圖層')
+  }
+}
+
+function handleCloseAirspaceDetail() {
+  selectedAirspace.value = null
+  if (airspaceOverlay) {
+    airspaceOverlay.setPosition(undefined)
+  }
 }
 
 function handleRefreshAircraft() {
@@ -446,6 +509,13 @@ function showToast(msg: string) {
             @reset-conflict="handleResetConflictSimulation"
             @focus-collision="handleFocusCollision"
           />
+
+          <!-- Module 3 Widget: Civil Aeronautics Administration (CAA) Drone No-Fly & Restricted Airspace Zones -->
+          <AirspaceWidget
+            :show-airspace="showAirspace"
+            :is-loading="isAirspaceLoading"
+            @toggle-airspace="handleToggleAirspace"
+          />
         </div>
 
         <!-- Right Header Action Slot (Theme Picker, etc.) -->
@@ -496,6 +566,15 @@ function showToast(msg: string) {
         :is-following="isFollowingDrone"
         @close="handleCloseDroneDetail"
         @toggle-follow="handleToggleFollowDrone"
+      />
+    </div>
+
+    <!-- OpenLayers Map Overlay: Airspace Detail HUD directly tethered to clicked zone -->
+    <div ref="airspaceOverlayTarget" class="pointer-events-auto select-none">
+      <AirspaceDetailCard
+        v-if="selectedAirspace"
+        :zone="selectedAirspace"
+        @close="handleCloseAirspaceDetail"
       />
     </div>
 
