@@ -202,7 +202,7 @@ export class AirspaceManager {
    * Fetch CAA airspace polygon features intersecting current map view extent
    */
   public async fetchCurrentExtentAirspace(): Promise<void> {
-    if (!this.map || this.isFetching) return
+    if (!this.map || this.isFetching || !this.isVisible) return
 
     const view = this.map.getView()
     const extent = view.calculateExtent(this.map.getSize())

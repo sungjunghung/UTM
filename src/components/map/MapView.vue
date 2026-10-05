@@ -59,7 +59,7 @@ const isSimulatingConflict = ref(false)
 // Airspace state (Civil Aeronautics Administration CAA UAV Red/Yellow Zones)
 const showAircraft = ref(false) // 航班預設關閉
 const showDrones = ref(true)
-const showAirspace = ref(true)
+const showAirspace = ref(false) // 禁限航區預設關閉，點擊開啟才取資訊
 const isAirspaceLoading = ref(false)
 const selectedAirspace = ref<AirspaceZoneInfo | null>(null)
 const airspaceFilterOptions = ref<AirspaceFilterOptions>({
