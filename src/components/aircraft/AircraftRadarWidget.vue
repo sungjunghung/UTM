@@ -62,8 +62,8 @@ const altitudeLegends = [
         ></span>
       </div>
 
-      <div class="text-xs font-semibold flex items-center gap-1.5">
-        <span class="text-base-content/70">雷達追蹤:</span>
+      <div class="text-xs font-semibold flex items-center gap-1.5" title="空域即時在空航班與航機">
+        <span class="text-base-content/70">空域即時航班:</span>
         <span class="font-mono font-bold text-primary">{{ aircraftList.length }}</span>
         <span class="text-base-content/60 text-[11px]">架</span>
       </div>
