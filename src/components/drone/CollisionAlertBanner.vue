@@ -40,7 +40,7 @@ const sortedRisks = computed(() => {
       <div
         v-for="(risk, idx) in sortedRisks"
         :key="risk.id"
-        class="rounded-md p-2 sm:p-2.5 backdrop-blur-2xl shadow-2xl border flex flex-col gap-1 transition-all duration-150"
+        class="rounded-md p-2 sm:p-2.5 backdrop-blur-2xl shadow-2xl border flex flex-col gap-1 transition-all duration-150 cursor-pointer hover:brightness-110 hover:shadow-cyan-900/40 active:scale-[0.99]"
         :class="
           risk.severity === 'critical'
             ? 'bg-rose-950/95 border-rose-500 shadow-rose-950/70 text-rose-50 ring-1 ring-rose-500/50 animate-pulse'
@@ -48,6 +48,8 @@ const sortedRisks = computed(() => {
             ? 'bg-amber-950/95 border-amber-500 shadow-amber-950/60 text-amber-50'
             : 'bg-slate-900/95 border-yellow-500 text-yellow-50'
         "
+        :title="`點擊立即將地圖視角定位至 ${risk.droneACallsign} 與 ${risk.droneBCallsign} 的預估碰撞點`"
+        @click="emit('focusCollision', risk.cpaCoordinate)"
       >
         <!-- Top bar: Alert index, header, drone pair & live countdown -->
         <div class="flex items-center justify-between gap-3">
@@ -76,7 +78,7 @@ const sortedRisks = computed(() => {
             </div>
           </div>
 
-          <!-- Countdown, Distance & Focus Button -->
+          <!-- Countdown & Distance Badges -->
           <div class="flex items-center gap-2.5 flex-shrink-0">
             <!-- CPA Countdown Badge -->
             <div
@@ -92,16 +94,6 @@ const sortedRisks = computed(() => {
               <div class="text-xs uppercase opacity-70 leading-none">最近距離</div>
               <div class="text-base font-black text-cyan-300 leading-tight mt-0.5">{{ risk.cpaDistanceMeters }}m</div>
             </div>
-
-            <!-- Focus Button -->
-            <button
-              class="btn btn-sm rounded-sm bg-white/10 hover:bg-white/25 border-white/20 text-white px-3 gap-1.5 font-medium"
-              :title="`立即將地圖鏡頭定位至 ${risk.droneACallsign} 與 ${risk.droneBCallsign} 的預估碰撞點`"
-              @click="emit('focusCollision', risk.cpaCoordinate)"
-            >
-              <MaterialIcon name="my_location" :size="16" />
-              <span class="text-sm hidden sm:inline">定位</span>
-            </button>
           </div>
         </div>
 
