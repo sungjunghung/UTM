@@ -27,15 +27,11 @@ export class AircraftEntity {
   public squawk: string
   public lastSeen: number
 
-  // Movement & Interpolation coordinates [lon, lat]
+  // Live coordinates on screen [lon, lat]
   public currentLonLat: [number, number]
-  private startLonLat: [number, number]
-  private targetLonLat: [number, number]
 
-  // Interpolation timeline (ms)
-  private moveStartTime: number = performance.now()
-  private moveDuration: number = 5000
-  private lastPacketTimestamp: number = 0
+  // Latest verified radar coordinates from API [lon, lat]
+  private targetLonLat: [number, number]
 
   // Animated heading & rotation
   private currentHeading: number
@@ -69,14 +65,12 @@ export class AircraftEntity {
     const lon = data.lon || 0
     const lat = data.lat || 0
     this.currentLonLat = [lon, lat]
-    this.startLonLat = [lon, lat]
     this.targetLonLat = [lon, lat]
     this.currentHeading = this.heading
     this.targetHeading = this.heading
     this.lastRenderedHeading = this.heading
-    this.lastPacketTimestamp = performance.now()
 
-    // Add first verified point to trail
+    // Add initial verified point to trail
     this.trail.push([lon, lat])
 
     // Initialize OpenLayers Features
@@ -134,7 +128,6 @@ export class AircraftEntity {
     }
 
     if (data.lon !== undefined && data.lat !== undefined && (data.lon !== 0 || data.lat !== 0)) {
-      const now = performance.now()
       const dLon = data.lon - this.targetLonLat[0]
       const dLat = data.lat - this.targetLonLat[1]
       const distApproxKm = Math.sqrt(dLon * dLon + dLat * dLat) * 111
@@ -144,7 +137,6 @@ export class AircraftEntity {
         this.heading = data.track
         this.targetHeading = data.track
       } else if (distApproxKm > 0.05) {
-        // Compute bearing from movement delta if track field is missing
         const rad = Math.atan2(
           dLon * Math.cos((data.lat * Math.PI) / 180),
           dLat
@@ -154,28 +146,23 @@ export class AircraftEntity {
         this.targetHeading = computedTrack
       }
 
-      // 2. Only record verified radar points into the trail (if moved > 40 meters)
-      if (distApproxKm > 0.04) {
+      // 2. Append verified position to trail (if moved > 30 meters)
+      if (distApproxKm > 0.03) {
         this.appendTrailPoint([data.lon, data.lat])
       }
 
-      // 3. Interpolation setup
-      if (distApproxKm > 30) {
-        // Teleport / sudden re-acquisition: snap directly
+      // 3. Update target position
+      this.targetLonLat = [data.lon, data.lat]
+
+      // 4. Large teleport / signal re-acquisition (> 50 km): snap directly
+      const currentDiscrepancyKm = Math.sqrt(
+        (data.lon - this.currentLonLat[0]) * (data.lon - this.currentLonLat[0]) +
+        (data.lat - this.currentLonLat[1]) * (data.lat - this.currentLonLat[1])
+      ) * 111
+
+      if (currentDiscrepancyKm > 50) {
         this.currentLonLat = [data.lon, data.lat]
-        this.startLonLat = [data.lon, data.lat]
-        this.targetLonLat = [data.lon, data.lat]
-        this.moveStartTime = now
-        this.moveDuration = 5000
-      } else {
-        // Measure real time between consecutive packets for accurate glide speed
-        const interval = this.lastPacketTimestamp > 0 ? now - this.lastPacketTimestamp : 5000
-        this.moveDuration = Math.max(3000, Math.min(interval, 9000))
-        this.moveStartTime = now
-        this.startLonLat = [...this.currentLonLat]
-        this.targetLonLat = [data.lon, data.lat]
       }
-      this.lastPacketTimestamp = now
     }
 
     this.updateStyle()
@@ -183,55 +170,57 @@ export class AircraftEntity {
   }
 
   /**
-   * 60 FPS Smooth Movement Step
-   * Interpolates cleanly between verified radar positions.
-   * If next packet is delayed, continues coasting forward so the plane never halts abruptly.
+   * 60 FPS Physics & Motion Controller
+   * - When no data arrives: continues flying forward smoothly at current speed and heading (NEVER freezes).
+   * - When data arrives: smoothly blends position offset via continuous spring convergence (NEVER teleports).
    */
   public stepPhysics(dt: number): void {
     if (dt <= 0 || dt > 1.0) dt = 0.016
 
-    const now = performance.now()
-    const elapsed = now - this.moveStartTime
-    const progress = this.moveDuration > 0 ? elapsed / this.moveDuration : 1.0
+    // 1. Continuous Forward Flight:
+    // Move along current heading at reported speed (knots)
+    // 1 knot = 0.514444 m/s. Works for drones, helicopters, and jets.
+    if (!this.isGround && this.speed > 2) {
+      const distMeters = this.speed * 0.514444 * dt
+      const rad = (this.currentHeading * Math.PI) / 180
+      const dLat = (distMeters * Math.cos(rad)) / 111320
+      const latRad = (this.currentLonLat[1] * Math.PI) / 180
+      const dLon = (distMeters * Math.sin(rad)) / (111320 * Math.max(Math.cos(latRad), 0.1))
 
-    if (progress <= 1.0) {
-      // 1. Accurate linear interpolation between previous position and new radar position
-      this.currentLonLat[0] = this.startLonLat[0] + (this.targetLonLat[0] - this.startLonLat[0]) * progress
-      this.currentLonLat[1] = this.startLonLat[1] + (this.targetLonLat[1] - this.startLonLat[1]) * progress
-
-      // Smooth heading rotation
-      this.currentHeading = lerpAngle(this.currentHeading, this.targetHeading, Math.min(dt * 6, 0.25))
-    } else {
-      // 2. Target reached but waiting for next radar packet:
-      // Coast smoothly forward along heading at reported speed
-      if (!this.isGround && this.speed > 15) {
-        const distMeters = this.speed * 0.514444 * dt
-        const rad = (this.currentHeading * Math.PI) / 180
-        const dLat = (distMeters * Math.cos(rad)) / 111320
-        const latRad = (this.currentLonLat[1] * Math.PI) / 180
-        const dLon = (distMeters * Math.sin(rad)) / (111320 * Math.max(Math.cos(latRad), 0.1))
-
-        this.currentLonLat[0] += dLon
-        this.currentLonLat[1] += dLat
-      }
+      this.currentLonLat[0] += dLon
+      this.currentLonLat[1] += dLat
     }
 
-    // 3. Update OpenLayers plane marker position
+    // 2. Soft Spring Error Reconciliation:
+    // Gently pulls the plane toward the latest verified radar position without sudden snapping
+    const errLon = this.targetLonLat[0] - this.currentLonLat[0]
+    const errLat = this.targetLonLat[1] - this.currentLonLat[1]
+
+    if (Math.abs(errLon) > 0.000001 || Math.abs(errLat) > 0.000001) {
+      const blendFactor = Math.min(dt * 1.6, 0.25)
+      this.currentLonLat[0] += errLon * blendFactor
+      this.currentLonLat[1] += errLat * blendFactor
+    }
+
+    // 3. Smooth Heading Rotation
+    this.currentHeading = lerpAngle(this.currentHeading, this.targetHeading, Math.min(dt * 5, 0.2))
+
+    // 4. Update OpenLayers plane marker position
     const geom = this.planeFeature.getGeometry()
     if (geom) {
       geom.setCoordinates(fromLonLat(this.currentLonLat))
     }
 
-    // 4. Update visual style if heading rotated by > 1.5 degrees
-    if (Math.abs(this.currentHeading - this.lastRenderedHeading) > 1.5) {
+    // 5. Update visual style if heading rotated by > 1.2 degrees
+    if (Math.abs(this.currentHeading - this.lastRenderedHeading) > 1.2) {
       this.lastRenderedHeading = this.currentHeading
       this.updateStyle()
     }
 
-    // 5. Update real-time flight trail geometry (verified history + current plane position)
+    // 6. Update real-time flight trail geometry (verified history + current live position)
     this.updateTrailGeometry()
 
-    // 6. Update forward heading projection line
+    // 7. Update forward heading projection line
     if (this.isSelected) {
       this.updateProjectionVector()
     }
@@ -242,7 +231,7 @@ export class AircraftEntity {
       const last = this.trail[this.trail.length - 1]
       const dLon = pt[0] - last[0]
       const dLat = pt[1] - last[1]
-      // Skip if closer than ~30 meters to avoid piling duplicate points
+      // Skip if closer than ~30 meters to avoid duplicate clustering
       if (Math.abs(dLon) < 0.0003 && Math.abs(dLat) < 0.0003) {
         return
       }
@@ -329,7 +318,7 @@ export class AircraftEntity {
     const geom = this.projectionFeature.getGeometry()
     if (!geom) return
 
-    if (!this.isSelected || this.isGround || this.speed < 30) {
+    if (!this.isSelected || this.isGround || this.speed < 20) {
       geom.setCoordinates([])
       return
     }
