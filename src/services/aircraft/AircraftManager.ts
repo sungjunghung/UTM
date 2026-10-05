@@ -2,7 +2,7 @@ import VectorLayer from 'ol/layer/Vector'
 import VectorSource from 'ol/source/Vector'
 import type OlMap from 'ol/Map'
 import MouseWheelZoom from 'ol/interaction/MouseWheelZoom'
-import { fromLonLat } from 'ol/proj'
+import { fromLonLat, transformExtent } from 'ol/proj'
 import { unByKey } from 'ol/Observable'
 import type { EventsKey } from 'ol/events'
 import { AircraftEntity } from './AircraftEntity'
@@ -47,6 +47,10 @@ export class AircraftManager {
   private hoveredHex: string | null = null
   private singleClickKey: EventsKey | null = null
   private pointerMoveKey: EventsKey | null = null
+  private moveEndKey: EventsKey | null = null
+  private viewCenterKey: EventsKey | null = null
+  private viewResolutionKey: EventsKey | null = null
+  private visibleHexes: Set<string> = new Set()
 
   // Callbacks
   private updateCallbacks: Set<(list: AircraftInfo[]) => void> = new Set()
@@ -146,8 +150,17 @@ export class AircraftManager {
       }
     })
 
+    // Listen to map viewport changes to filter visible aircraft locally (0ms, no network call!)
+    const view = this.map.getView()
+    this.moveEndKey = this.map.on('moveend', () => this.updateViewportFiltering())
+    this.viewCenterKey = view.on('change:center', () => this.updateViewportFiltering())
+    this.viewResolutionKey = view.on('change:resolution', () => this.updateViewportFiltering())
+
     // Page visibility listener: stop polling when tab is hidden
     document.addEventListener('visibilitychange', this.handleVisibilityChange)
+
+    // Initial filter pass
+    this.updateViewportFiltering()
 
     // Start background polling & 60fps velocity animation loop
     this.start()
@@ -245,9 +258,6 @@ export class AircraftManager {
         // Create new entity
         const entity = new AircraftEntity(raw)
         this.aircraftMap.set(raw.hex, entity)
-        this.planeSource.addFeature(entity.getPlaneFeature())
-        this.trailSource.addFeature(entity.getTrailFeature())
-        this.projectionSource.addFeature(entity.getProjectionFeature())
       }
     })
 
@@ -255,9 +265,12 @@ export class AircraftManager {
     const now = Date.now()
     this.aircraftMap.forEach((entity, hex) => {
       if (!activeHexes.has(hex) && now - entity.lastSeen > 60000) {
-        this.planeSource.removeFeature(entity.getPlaneFeature())
-        this.trailSource.removeFeature(entity.getTrailFeature())
-        this.projectionSource.removeFeature(entity.getProjectionFeature())
+        if (this.visibleHexes.has(hex)) {
+          this.planeSource.removeFeature(entity.getPlaneFeature())
+          this.trailSource.removeFeature(entity.getTrailFeature())
+          this.projectionSource.removeFeature(entity.getProjectionFeature())
+          this.visibleHexes.delete(hex)
+        }
         this.aircraftMap.delete(hex)
         if (this.hoveredHex === hex) {
           this.hoveredHex = null
@@ -268,7 +281,8 @@ export class AircraftManager {
       }
     })
 
-    this.notifyUpdate()
+    // Apply viewport filtering to new / updated planes
+    this.updateViewportFiltering()
   }
 
   /**
@@ -390,8 +404,73 @@ export class AircraftManager {
     return this.showTrails
   }
 
+  /**
+   * Filter and update visible aircraft features on the map based on current screen extent
+   * Runs in 0ms purely on local memory without any network request!
+   */
+  public updateViewportFiltering(): void {
+    if (!this.map) return
+
+    const size = this.map.getSize()
+    if (!size || size[0] === 0 || size[1] === 0) return
+
+    const view = this.map.getView()
+    const extent = view.calculateExtent(size)
+    const [minLon, minLat, maxLon, maxLat] = transformExtent(extent, 'EPSG:3857', 'EPSG:4326')
+
+    // Add a 10% buffer so aircraft near the screen edges don't pop abruptly
+    const bufLon = (maxLon - minLon) * 0.1
+    const bufLat = (maxLat - minLat) * 0.1
+    const bMinLon = minLon - bufLon
+    const bMaxLon = maxLon + bufLon
+    const bMinLat = minLat - bufLat
+    const bMaxLat = maxLat + bufLat
+
+    let changed = false
+
+    this.aircraftMap.forEach((entity, hex) => {
+      const [lon, lat] = entity.currentLonLat
+      const inView =
+        hex === this.selectedHex || // always display selected aircraft
+        (lon >= bMinLon && lon <= bMaxLon && lat >= bMinLat && lat <= bMaxLat)
+
+      const isCurrentlyVisible = this.visibleHexes.has(hex)
+
+      if (inView && !isCurrentlyVisible) {
+        // Plane entered screen: add to OpenLayers sources
+        this.visibleHexes.add(hex)
+        this.planeSource.addFeature(entity.getPlaneFeature())
+        this.trailSource.addFeature(entity.getTrailFeature())
+        this.projectionSource.addFeature(entity.getProjectionFeature())
+        changed = true
+      } else if (!inView && isCurrentlyVisible) {
+        // Plane left screen: remove from OpenLayers sources
+        this.visibleHexes.delete(hex)
+        this.planeSource.removeFeature(entity.getPlaneFeature())
+        this.trailSource.removeFeature(entity.getTrailFeature())
+        this.projectionSource.removeFeature(entity.getProjectionFeature())
+        changed = true
+      }
+    })
+
+    if (changed) {
+      this.notifyUpdate()
+    }
+  }
+
   public getAircraftList(): AircraftInfo[] {
-    return Array.from(this.aircraftMap.values()).map((e) => e.getInfo())
+    const list: AircraftInfo[] = []
+    this.visibleHexes.forEach((hex) => {
+      const entity = this.aircraftMap.get(hex)
+      if (entity) {
+        list.push(entity.getInfo())
+      }
+    })
+    return list
+  }
+
+  public getTotalPoolCount(): number {
+    return this.aircraftMap.size
   }
 
   public getSelectedAircraft(): AircraftInfo | null {
@@ -449,6 +528,18 @@ export class AircraftManager {
       unByKey(this.pointerMoveKey)
       this.pointerMoveKey = null
     }
+    if (this.moveEndKey) {
+      unByKey(this.moveEndKey)
+      this.moveEndKey = null
+    }
+    if (this.viewCenterKey) {
+      unByKey(this.viewCenterKey)
+      this.viewCenterKey = null
+    }
+    if (this.viewResolutionKey) {
+      unByKey(this.viewResolutionKey)
+      this.viewResolutionKey = null
+    }
     this.stop()
     this.updateCallbacks.clear()
     this.selectCallbacks.clear()
@@ -466,5 +557,6 @@ export class AircraftManager {
     this.projectionSource.clear()
     this.trailSource.clear()
     this.aircraftMap.clear()
+    this.visibleHexes.clear()
   }
 }
