@@ -51,10 +51,10 @@ onMounted(() => {
   const olMap = mapManager.getMap()
   if (olMap) {
     aircraftManager = new AircraftManager({
-      centerLat: 23.838,
-      centerLon: 120.982,
-      radiusNm: 250,
-      pollIntervalMs: 5000,
+      centerLat: 24.7887,
+      centerLon: 121.0028,
+      radiusNm: 120,
+      pollIntervalMs: 6000,
       showTrails: showTrails.value,
     })
 

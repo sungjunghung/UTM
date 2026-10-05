@@ -45,10 +45,10 @@ export class AircraftManager {
   private errorCallbacks: Set<(err: string | null) => void> = new Set()
 
   constructor(options: AircraftManagerOptions = {}) {
-    this.centerLat = options.centerLat ?? 23.838 // Center Taiwan
-    this.centerLon = options.centerLon ?? 120.982
-    this.radiusNm = options.radiusNm ?? 250
-    this.pollIntervalMs = options.pollIntervalMs ?? 5000
+    this.centerLat = options.centerLat ?? 24.7887 // NCHC Taiwan
+    this.centerLon = options.centerLon ?? 121.0028
+    this.radiusNm = options.radiusNm ?? 120
+    this.pollIntervalMs = options.pollIntervalMs ?? 6000
     this.showTrails = options.showTrails ?? true
 
     // Initialize layers
