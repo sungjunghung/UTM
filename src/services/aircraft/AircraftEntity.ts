@@ -168,13 +168,13 @@ export class AircraftEntity {
           this.currentLonLat = [data.lon, data.lat]
           this.speedScale = 1.0
           this.crossTrackOffsetMeters = 0
-        } else if (this.isGround || this.speed <= 2) {
-          // Ground or stationary aircraft: align directly
+        } else if (this.speed <= 2) {
+          // Stationary aircraft (parked at gate or apron): keep strictly in place
           this.currentLonLat = [data.lon, data.lat]
           this.speedScale = 1.0
           this.crossTrackOffsetMeters = 0
         } else {
-          // Airborne aircraft: decompose vector into Along-Track and Cross-Track
+          // Moving aircraft (airborne OR ground taxiing): decompose vector into Along-Track and Cross-Track
           const headingRad = (this.currentHeading * Math.PI) / 180
           const sinH = Math.sin(headingRad)
           const cosH = Math.cos(headingRad)
@@ -218,8 +218,8 @@ export class AircraftEntity {
     if (dt <= 0 || dt > 0.5) dt = 0.016
 
     // 1. Continuous Forward Flight & Lateral Course Alignment:
-    // Planes ONLY move forward along their flight vector, NEVER in reverse.
-    if (!this.isGround && this.speed > 2) {
+    // Any moving aircraft (airborne OR ground taxiing > 2 knots) glides forward at speed & heading.
+    if (this.speed > 2) {
       // speedScale smoothly relaxes back to nominal cruise speed (1.0)
       this.speedScale += (1.0 - this.speedScale) * Math.min(dt * 0.4, 0.1)
 
