@@ -70,7 +70,7 @@ onMounted(() => {
             <MaterialIcon name="map" :size="20" />
           </div>
           <div class="flex items-baseline gap-1.5">
-            <span class="font-extrabold text-base tracking-tight bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
+            <span class="font-extrabold text-base tracking-tight text-primary">
               UTM Map
             </span>
             <span class="badge badge-xs badge-outline font-mono text-[10px]">OpenLayers</span>
