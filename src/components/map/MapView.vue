@@ -55,6 +55,7 @@ const droneList = ref<DroneInfo[]>([])
 const selectedDrone = ref<DroneInfo | null>(null)
 const isFollowingDrone = ref(false)
 const collisionRisks = ref<CollisionRisk[]>([])
+const selectedRiskId = ref<string | null>(null)
 const isSimulatingConflict = ref(false)
 
 // Airspace state (Civil Aeronautics Administration CAA UAV Red/Yellow Zones)
@@ -320,6 +321,10 @@ function handleToggleTrails() {
 // Drone Controls
 function handleSelectDrone(id: string) {
   droneManager?.selectDrone(id)
+  const matchRisk = collisionRisks.value.find((r) => r.droneAId === id || r.droneBId === id)
+  if (matchRisk) {
+    selectedRiskId.value = matchRisk.id
+  }
 }
 
 function handleCloseDroneDetail() {
@@ -355,6 +360,8 @@ function handleToggleDrones() {
   droneManager?.toggleLayer(showDrones.value)
   if (!showDrones.value) {
     droneManager?.stop() // 關閉就不再運算/模擬
+    collisionRisks.value = []
+    selectedRiskId.value = null
     handleCloseDroneDetail()
     showToast('已關閉空域即時無人機圖層')
   } else {
@@ -377,12 +384,26 @@ function handleTriggerConflictSimulation() {
 function handleResetConflictSimulation() {
   isSimulatingConflict.value = false
   droneManager?.resetSimulation()
+  selectedRiskId.value = null
   showToast('已重設無人機航線為標準巡檢模式')
 }
 
-function handleFocusCollision(coord: [number, number]) {
+function handleFocusCollision(coord: [number, number], riskId?: string) {
+  if (riskId) {
+    selectedRiskId.value = riskId
+  } else if (collisionRisks.value.length > 0) {
+    const match = collisionRisks.value.find(
+      (r) => r.cpaCoordinate[0] === coord[0] && r.cpaCoordinate[1] === coord[1]
+    )
+    selectedRiskId.value = match ? match.id : collisionRisks.value[0].id
+  }
   mapManager?.flyTo(coord, 16)
-  showToast('已鎖定至 CPA 預測衝突交會點')
+  showToast('已鎖定至警戒預測位置')
+}
+
+function handleSelectRisk(risk: CollisionRisk) {
+  selectedRiskId.value = risk.id
+  handleFocusCollision(risk.cpaCoordinate, risk.id)
 }
 
 // Airspace (CAA No-Fly / Restricted Zones) Controls
@@ -486,7 +507,7 @@ function showToast(msg: string) {
           <DroneWidget
             :drone-list="droneList"
             :show-drones="showDrones"
-            :collision-risks="collisionRisks"
+            :collision-risks="showDrones ? collisionRisks : []"
             :is-simulating-conflict="isSimulatingConflict"
             @select-drone="handleSelectDrone"
             @toggle-drones="handleToggleDrones"
@@ -513,10 +534,15 @@ function showToast(msg: string) {
       </div>
     </header>
 
-    <!-- Immediate Collision Alert Banner: Pops up automatically at the top of the screen whenever CPA hazard occurs -->
-    <div class="absolute top-18 left-4 right-4 z-40 pointer-events-none flex justify-center">
+    <!-- Tactical Real-time Collision & Airspace Alert Stack: Positioned in Upper-Right HUD -->
+    <div
+      v-if="showDrones"
+      class="absolute top-18 right-4 z-40 pointer-events-none w-96 max-w-[calc(100vw-2rem)] flex flex-col gap-2"
+    >
       <CollisionAlertBanner
         :collision-risks="collisionRisks"
+        :selected-risk-id="selectedRiskId"
+        @select-risk="handleSelectRisk"
         @focus-collision="handleFocusCollision"
       />
     </div>

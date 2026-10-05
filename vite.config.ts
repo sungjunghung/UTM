@@ -37,6 +37,26 @@ function adsbCachePlugin(): Plugin {
           return
         }
 
+        if (req.url && req.url.startsWith('/api/adsbdb/')) {
+          const upstreamPath = req.url.replace(/^\/api\/adsbdb/, '')
+          try {
+            const upstreamRes = await fetch(`https://api.adsbdb.com/v0${upstreamPath}`, {
+              headers: {
+                'User-Agent': 'UTM-FlightRadar/1.0',
+                Accept: 'application/json',
+              },
+            })
+            const body = await upstreamRes.text()
+            res.setHeader('Content-Type', 'application/json')
+            res.setHeader('Cache-Control', 'public, max-age=86400')
+            res.end(body)
+          } catch (err: any) {
+            res.statusCode = 502
+            res.end(JSON.stringify({ error: err.message }))
+          }
+          return
+        }
+
         if (req.url && req.url.startsWith('/api/caa/')) {
           const upstreamPath = req.url.replace(/^\/api\/caa/, '')
           const caaUrl = `https://dronegis.caa.gov.tw/server/rest/services/Hosted/UAV_fs_ryg/FeatureServer/0${upstreamPath}`

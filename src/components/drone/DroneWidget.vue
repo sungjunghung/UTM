@@ -22,9 +22,9 @@ const emit = defineEmits<{
 
 const searchQuery = ref('')
 const isSearchOpen = ref(false)
-const isAlertsOpen = ref(false)
 
 const highestAlertSeverity = computed(() => {
+  if (!props.showDrones) return 'clear'
   if (!props.collisionRisks || props.collisionRisks.length === 0) return 'clear'
   if (props.collisionRisks.some((r) => r.severity === 'critical')) return 'critical'
   if (props.collisionRisks.some((r) => r.severity === 'warning')) return 'warning'
@@ -43,6 +43,30 @@ const filteredList = computed(() => {
       d.missionType.toUpperCase().includes(q)
   )
 })
+
+function toggleSearch() {
+  if (props.showDrones) {
+    isSearchOpen.value = !isSearchOpen.value
+  }
+}
+
+function handleAlertClick() {
+  if (props.showDrones && props.collisionRisks && props.collisionRisks.length > 0) {
+    emit('focusCollision', props.collisionRisks[0].cpaCoordinate)
+  }
+}
+
+function handleConflictClick() {
+  if (props.showDrones) {
+    props.isSimulatingConflict ? emit('resetConflict') : emit('triggerConflict')
+  }
+}
+
+function handleFocusHub() {
+  if (props.showDrones) {
+    emit('focusDroneZone')
+  }
+}
 </script>
 
 <template>
@@ -80,19 +104,28 @@ const filteredList = computed(() => {
 
       <!-- Action: Toggle Search List -->
       <button
-        class="btn btn-sm btn-ghost btn-circle"
-        :class="{ 'btn-active text-cyan-400': isSearchOpen }"
+        class="btn btn-sm btn-circle"
+        :class="
+          !showDrones
+            ? 'btn-ghost text-base-content/25 opacity-40 cursor-not-allowed pointer-events-none'
+            : isSearchOpen
+            ? 'btn-ghost btn-active text-cyan-400'
+            : 'btn-ghost'
+        "
+        :disabled="!showDrones"
         title="查看無人機機隊清單"
-        @click="isSearchOpen = !isSearchOpen"
+        @click="toggleSearch"
       >
         <MaterialIcon name="toys" :size="18" />
       </button>
 
-      <!-- Action: Collision Alerts (CPA) Button -->
+      <!-- Action: Alert Status Indicator (警示燈號，不展開彈窗) -->
       <button
         class="btn btn-sm btn-circle relative transition-all"
         :class="
-          highestAlertSeverity === 'critical'
+          !showDrones
+            ? 'btn-ghost text-base-content/25 opacity-40 cursor-not-allowed pointer-events-none'
+            : highestAlertSeverity === 'critical'
             ? 'btn-error animate-pulse text-white shadow-lg shadow-error/40'
             : highestAlertSeverity === 'warning'
             ? 'btn-warning text-slate-900 shadow-md'
@@ -100,15 +133,22 @@ const filteredList = computed(() => {
             ? 'btn-info text-white'
             : 'btn-ghost text-base-content/70'
         "
-        :title="`CPA 碰撞預警監控 (${collisionRisks?.length || 0} 起衝突預警)`"
-        @click="isAlertsOpen = !isAlertsOpen"
+        :disabled="!showDrones"
+        :title="
+          !showDrones
+            ? '無人機圖層已關閉'
+            : collisionRisks && collisionRisks.length > 0
+            ? `空域即時告警 (${collisionRisks.length} 則) - 點擊將視角定位至首要警戒空域`
+            : '空域正常（無衝突與越界）'
+        "
+        @click="handleAlertClick"
       >
         <MaterialIcon
-          :name="highestAlertSeverity !== 'clear' ? 'warning' : 'security'"
+          :name="showDrones && highestAlertSeverity !== 'clear' ? 'warning' : 'security'"
           :size="18"
         />
         <span
-          v-if="collisionRisks && collisionRisks.length > 0"
+          v-if="showDrones && collisionRisks && collisionRisks.length > 0"
           class="badge badge-sm absolute -top-1 -right-1 px-1 font-bold border-none"
           :class="highestAlertSeverity === 'critical' ? 'bg-white text-error' : 'bg-warning text-slate-900'"
         >
@@ -120,12 +160,21 @@ const filteredList = computed(() => {
       <button
         class="btn btn-sm rounded-sm px-2.5 gap-1.5 font-medium transition-all"
         :class="
-          isSimulatingConflict
+          !showDrones
+            ? 'btn-ghost opacity-40 cursor-not-allowed text-base-content/30 pointer-events-none'
+            : isSimulatingConflict
             ? 'btn-error btn-outline animate-pulse text-sm'
             : 'btn-ghost text-sm hover:bg-cyan-500/10 text-cyan-400'
         "
-        :title="isSimulatingConflict ? '重設為正常巡檢' : '模擬兩架無人機航向交會碰撞預警'"
-        @click="isSimulatingConflict ? emit('resetConflict') : emit('triggerConflict')"
+        :disabled="!showDrones"
+        :title="
+          !showDrones
+            ? '請先開啟無人機圖層'
+            : isSimulatingConflict
+            ? '重設為正常巡檢'
+            : '模擬兩架無人機航向交會碰撞預警'
+        "
+        @click="handleConflictClick"
       >
         <MaterialIcon :name="isSimulatingConflict ? 'restart_alt' : 'crisis_alert'" :size="16" />
         <span class="text-sm font-semibold">{{ isSimulatingConflict ? '還原巡檢' : '模擬碰撞' }}</span>
@@ -133,9 +182,11 @@ const filteredList = computed(() => {
 
       <!-- Action: Center on Drone Operations Hub -->
       <button
-        class="btn btn-sm btn-ghost btn-circle text-cyan-400"
+        class="btn btn-sm btn-ghost btn-circle"
+        :class="!showDrones ? 'text-base-content/25 opacity-40 cursor-not-allowed pointer-events-none' : 'text-cyan-400'"
+        :disabled="!showDrones"
         title="視角移至合法空域無人機作業群"
-        @click="emit('focusDroneZone')"
+        @click="handleFocusHub"
       >
         <MaterialIcon name="my_location" :size="18" />
       </button>
@@ -200,130 +251,6 @@ const filteredList = computed(() => {
             <div class="text-sm text-emerald-400">🔋 {{ d.batteryPercent }}%</div>
           </div>
         </button>
-      </div>
-    </div>
-
-    <!-- Collision Risk Alerts Popover -->
-    <div
-      v-if="isAlertsOpen"
-      class="w-84 sm:w-96 rounded-md bg-base-100/98 backdrop-blur-md border border-warning/40 shadow-2xl p-4 space-y-3 animate-in fade-in duration-100 z-50 text-sm"
-    >
-      <div class="flex items-center justify-between pb-1.5 border-b border-base-300">
-        <span class="text-sm font-bold flex items-center gap-2 text-warning">
-          <MaterialIcon name="crisis_alert" :size="18" />
-          UTM 空域衝突與 CPA 碰撞預警
-        </span>
-        <button class="btn btn-sm btn-circle btn-ghost" @click="isAlertsOpen = false">
-          <MaterialIcon name="close" :size="16" />
-        </button>
-      </div>
-
-      <!-- No alerts state -->
-      <div
-        v-if="!collisionRisks || collisionRisks.length === 0"
-        class="py-6 text-center text-sm text-base-content/70 space-y-2"
-      >
-        <div class="w-10 h-10 mx-auto rounded-full bg-success/20 text-success flex items-center justify-center">
-          <MaterialIcon name="verified_user" :size="22" />
-        </div>
-        <div class="font-bold text-base text-success">全空域無碰撞風險（綠燈安全）</div>
-        <div class="text-sm text-base-content/60">
-          點擊上方「模擬碰撞」按鈕可立即體驗航向交叉碰撞預警
-        </div>
-      </div>
-
-      <!-- Active Alerts List -->
-      <div v-else class="space-y-2 max-h-80 overflow-y-auto pr-1">
-        <div
-          v-for="risk in collisionRisks"
-          :key="risk.id"
-          class="p-3 rounded-sm border text-sm transition-all space-y-2"
-          :class="
-            risk.severity === 'critical'
-              ? 'bg-error/15 border-error/50 shadow-md shadow-error/20'
-              : risk.severity === 'warning'
-              ? 'bg-warning/15 border-warning/50'
-              : 'bg-info/10 border-info/40'
-          "
-        >
-          <!-- Conflict Header -->
-          <div class="flex items-center justify-between">
-            <div class="flex items-center gap-2 font-bold text-sm">
-              <span
-                class="badge badge-sm font-bold"
-                :class="
-                  risk.severity === 'critical'
-                    ? 'badge-error text-white'
-                    : risk.severity === 'warning'
-                    ? 'badge-warning text-slate-900'
-                    : 'badge-info text-white'
-                "
-              >
-                <template v-if="risk.type === 'no-fly-zone'">🔴 禁航越界</template>
-                <template v-else-if="risk.type === 'altitude-violation'">🟠 限航超高</template>
-                <template v-else>{{ risk.severity === 'critical' ? '🔴 緊急衝突' : risk.severity === 'warning' ? '🟠 碰撞警戒' : '🟡 空域注意' }}</template>
-              </span>
-              <span class="truncate">
-                <template v-if="risk.type === 'no-fly-zone'">{{ risk.droneACallsign }} ⚡ {{ risk.zoneName }}</template>
-                <template v-else-if="risk.type === 'altitude-violation'">{{ risk.droneACallsign }} ⚡ {{ risk.zoneName }}</template>
-                <template v-else>{{ risk.droneACallsign }} ↔ {{ risk.droneBCallsign }}</template>
-              </span>
-            </div>
-            <button
-              class="btn btn-sm btn-outline btn-ghost text-sm px-2.5 h-8 min-h-0"
-              title="聚焦衝突預測點"
-              @click="
-                emit('focusCollision', risk.cpaCoordinate);
-                isAlertsOpen = false;
-              "
-            >
-              <MaterialIcon name="my_location" :size="16" />
-              定位
-            </button>
-          </div>
-
-          <!-- Spatial CPA Stats Grid or Violation Stats Grid -->
-          <div class="grid grid-cols-3 gap-2 bg-base-100/60 p-2.5 rounded-sm border border-base-content/10 font-mono text-sm">
-            <template v-if="risk.type === 'no-fly-zone' || risk.type === 'altitude-violation'">
-              <div>
-                <div class="text-xs text-base-content/70">違規類型</div>
-                <div class="font-bold text-cyan-400 text-sm">{{ risk.metricPrimaryValue || '空域違規' }}</div>
-              </div>
-              <div>
-                <div class="text-xs text-base-content/70">當前高度</div>
-                <div class="font-bold text-sm text-warning">{{ risk.currentAltitudeMeters }} m</div>
-              </div>
-              <div>
-                <div class="text-xs text-base-content/70">{{ risk.metricSecondaryTitle || '管制要求' }}</div>
-                <div class="font-bold text-amber-300 text-sm">{{ risk.metricSecondaryValue || (risk.maxLegalAltitudeMeters ? `≤${risk.maxLegalAltitudeMeters}m` : '禁飛') }}</div>
-              </div>
-            </template>
-            <template v-else>
-              <div>
-                <div class="text-xs text-base-content/70">目前距離</div>
-                <div class="font-bold text-cyan-400 text-sm">{{ risk.currentDistanceMeters ?? 0 }} m</div>
-              </div>
-              <div>
-                <div class="text-xs text-base-content/70">預估 CPA 距離</div>
-                <div
-                  class="font-bold text-sm"
-                  :class="(risk.cpaDistanceMeters ?? 999) < 30 ? 'text-error font-extrabold' : 'text-warning'"
-                >
-                  {{ risk.cpaDistanceMeters ?? 0 }} m
-                </div>
-              </div>
-              <div>
-                <div class="text-xs text-base-content/70">發生時間</div>
-                <div class="font-bold text-amber-300 text-sm">{{ risk.timeToCpaSeconds ?? 0 }} 秒後</div>
-              </div>
-            </template>
-          </div>
-
-          <!-- Suggested Advisory Action -->
-          <div class="text-sm leading-relaxed text-base-content/90 font-sans">
-            {{ risk.advisoryText }}
-          </div>
-        </div>
       </div>
     </div>
   </div>

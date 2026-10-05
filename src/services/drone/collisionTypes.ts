@@ -27,6 +27,9 @@ export interface CollisionRisk {
 
   // Airspace violation metrics (for no-fly / restricted altitude limit)
   zoneName?: string
+  zoneCenter?: [number, number]
+  zoneRadiusMeters?: number
+  stage?: 'approaching' | 'breached' | 'resolved'
   currentAltitudeMeters?: number
   maxLegalAltitudeMeters?: number
 

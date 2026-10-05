@@ -110,9 +110,9 @@ export function createDroneStyle(
     styles.push(
       new Style({
         image: new CircleStyle({
-          radius: 25,
+          radius: 34,
           stroke: new Stroke({ color: '#ef4444', width: 2.5, lineDash: [5, 3] }),
-          fill: new Fill({ color: 'rgba(239, 68, 68, 0.28)' }),
+          fill: new Fill({ color: 'rgba(239, 68, 68, 0.25)' }),
         }),
         zIndex: 110,
       })
@@ -121,7 +121,7 @@ export function createDroneStyle(
     styles.push(
       new Style({
         image: new CircleStyle({
-          radius: 23,
+          radius: 32,
           stroke: new Stroke({ color: '#f97316', width: 2, lineDash: [4, 4] }),
           fill: new Fill({ color: 'rgba(249, 115, 22, 0.22)' }),
         }),
@@ -132,8 +132,8 @@ export function createDroneStyle(
     styles.push(
       new Style({
         image: new CircleStyle({
-          radius: 22,
-          stroke: new Stroke({ color: '#06b6d4', width: 2, lineDash: [4, 3] }),
+          radius: 32,
+          stroke: new Stroke({ color: '#06b6d4', width: 2.2, lineDash: [5, 3] }),
           fill: new Fill({ color: 'rgba(6, 182, 212, 0.22)' }),
         }),
         zIndex: 98,
@@ -143,8 +143,8 @@ export function createDroneStyle(
     styles.push(
       new Style({
         image: new CircleStyle({
-          radius: 19,
-          stroke: new Stroke({ color: '#38bdf8', width: 1.5 }),
+          radius: 28,
+          stroke: new Stroke({ color: '#38bdf8', width: 1.8 }),
           fill: new Fill({ color: 'rgba(56, 189, 248, 0.15)' }),
         }),
         zIndex: 88,
@@ -159,7 +159,7 @@ export function createDroneStyle(
       textStyle = new Text({
         text: label,
         textBaseline: 'top',
-        offsetY: 26,
+        offsetY: 36,
         font: 'bold 11px system-ui, sans-serif',
         fill: new Fill({ color: '#ffffff' }),
         stroke: new Stroke({ color: '#0f172a', width: 3.5 }),
@@ -171,7 +171,7 @@ export function createDroneStyle(
       textStyle = new Text({
         text: label,
         textBaseline: 'top',
-        offsetY: 24,
+        offsetY: 32,
         font: 'bold 11px system-ui, sans-serif',
         fill: new Fill({ color: '#38bdf8' }),
         stroke: new Stroke({ color: '#0f172a', width: 3.5 }),
@@ -183,7 +183,7 @@ export function createDroneStyle(
       textStyle = new Text({
         text: label,
         textBaseline: 'top',
-        offsetY: 22,
+        offsetY: 28,
         font: '10px system-ui, sans-serif',
         fill: new Fill({ color: '#ffffff' }),
         stroke: new Stroke({ color: '#0f172a', width: 3 }),
@@ -195,7 +195,9 @@ export function createDroneStyle(
     new Style({
       image: new Icon({
         src,
-        anchor: [0.5, 0.5],
+        anchor: [22, 30],
+        anchorXUnits: 'pixels',
+        anchorYUnits: 'pixels',
         rotateWithView: true,
         rotation,
         scale,

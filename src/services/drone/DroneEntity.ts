@@ -190,9 +190,9 @@ export class DroneEntity {
         const dyMeters = dLatDeg * 111320
         const distMeters = Math.hypot(dxMeters, dyMeters)
 
-        if (distMeters < 8) {
-          // Arrived at waypoint: dwell/hover for 3 seconds to inspect
-          this.hoverTimer = 3.0
+        if (distMeters < 12) {
+          // Arrived at waypoint: momentary smooth dwell (0.5s) then advance to next waypoint for continuous loop
+          this.hoverTimer = 0.5
           this.currentWaypointIndex = (this.currentWaypointIndex + 1) % this.waypoints.length
         } else {
           // Calculate heading towards target waypoint

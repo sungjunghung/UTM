@@ -11,7 +11,13 @@ import type { DroneInfo, DroneManagerOptions } from './types'
 import type { CollisionRisk } from './collisionTypes'
 import { calculateCpaRisk } from './collisionService'
 import { checkAirspaceViolations } from './airspaceAlertService'
-import { createConflictPointStyle, createConflictVectorStyle } from './conflictStyles'
+import {
+  createConflictPointStyle,
+  createConflictVectorStyle,
+  createThreatZoneStyles,
+  createThreatConnectorStyle,
+} from './conflictStyles'
+import { getRealCaaZoneGeometry } from '../airspace/monitoredAirspacePolygons'
 
 export class DroneManager {
   private map: OlMap | null = null
@@ -19,11 +25,13 @@ export class DroneManager {
   private trailSource = new VectorSource()
   private missionSource = new VectorSource()
   private conflictSource = new VectorSource()
+  private threatZoneSource = new VectorSource()
 
   private droneLayer: VectorLayer<VectorSource>
   private trailLayer: VectorLayer<VectorSource>
   private missionLayer: VectorLayer<VectorSource>
   private conflictLayer: VectorLayer<VectorSource>
+  private threatZoneLayer: VectorLayer<VectorSource>
 
   private droneMap = new Map<string, DroneEntity>()
   private selectedDroneId: string | null = null
@@ -48,6 +56,11 @@ export class DroneManager {
   private collisionCallbacks: Set<(risks: CollisionRisk[]) => void> = new Set()
 
   constructor(options: DroneManagerOptions = {}) {
+    this.threatZoneLayer = new VectorLayer({
+      source: this.threatZoneSource,
+      zIndex: 32, // Renders dynamically highlighted airspace zones below trails/conflict vectors
+    })
+
     this.trailLayer = new VectorLayer({
       source: this.trailSource,
       zIndex: 35,
@@ -75,6 +88,7 @@ export class DroneManager {
 
   public attachToMap(map: OlMap): void {
     this.map = map
+    this.map.addLayer(this.threatZoneLayer)
     this.map.addLayer(this.missionLayer)
     this.map.addLayer(this.trailLayer)
     this.map.addLayer(this.conflictLayer)
@@ -148,6 +162,10 @@ export class DroneManager {
       cancelAnimationFrame(this.animationFrameId)
       this.animationFrameId = null
     }
+    this.collisionRisks = []
+    this.collisionCallbacks.forEach((cb) => cb([]))
+    this.conflictSource.clear()
+    this.threatZoneSource.clear()
   }
 
   public destroy(): void {
@@ -158,6 +176,7 @@ export class DroneManager {
     if (this.map) {
       this.map.removeLayer(this.droneLayer)
       this.map.removeLayer(this.conflictLayer)
+      this.map.removeLayer(this.threatZoneLayer)
       this.map.removeLayer(this.trailLayer)
       this.map.removeLayer(this.missionLayer)
       this.map = null
@@ -168,6 +187,7 @@ export class DroneManager {
     this.trailSource.clear()
     this.missionSource.clear()
     this.conflictSource.clear()
+    this.threatZoneSource.clear()
     this.updateCallbacks.clear()
     this.selectCallbacks.clear()
     this.selectedMoveCallbacks.clear()
@@ -257,6 +277,13 @@ export class DroneManager {
     this.trailLayer.setVisible(visible)
     this.missionLayer.setVisible(visible)
     this.conflictLayer.setVisible(visible)
+    this.threatZoneLayer.setVisible(visible)
+    if (!visible) {
+      this.collisionRisks = []
+      this.collisionCallbacks.forEach((cb) => cb([]))
+      this.conflictSource.clear()
+      this.threatZoneSource.clear()
+    }
   }
 
   /**
@@ -339,6 +366,7 @@ export class DroneManager {
   public resetSimulation(): void {
     this.isSimulatingConflict = false
     this.conflictSource.clear()
+    this.threatZoneSource.clear()
     this.collisionRisks = []
     this.droneMap.forEach((d) => d.setAlertSeverity('clear'))
 
@@ -452,6 +480,7 @@ export class DroneManager {
     const allAlerts: CollisionRisk[] = [...risks, ...airspaceAlerts]
     this.collisionRisks = allAlerts
     this.updateConflictLayerFeatures(risks)
+    this.updateThreatZoneFeatures(airspaceAlerts)
     this.collisionCallbacks.forEach((cb) => cb(allAlerts))
   }
 
@@ -493,6 +522,55 @@ export class DroneManager {
         createConflictPointStyle(risk.severity, risk.timeToCpaSeconds ?? 0, risk.cpaDistanceMeters ?? 0)
       )
       this.conflictSource.addFeature(pointFeature)
+    })
+  }
+
+  /**
+   * Render dynamic threatened airspace zones (即將誤觸或已入侵的民航局禁限航區) using authentic CAA polygon boundaries
+   * NEVER draws artificial circles: strictly renders the real polygon geometry of the designated zone!
+   * Once alerts clear, threatZoneSource is completely emptied so the zone immediately disappears from the map.
+   */
+  private updateThreatZoneFeatures(alerts: CollisionRisk[]): void {
+    this.threatZoneSource.clear()
+    if (!alerts || alerts.length === 0) {
+      return // 解除後立即消失！
+    }
+
+    const renderedZoneKeys = new Set<string>()
+
+    alerts.forEach((alert) => {
+      const zoneKey = alert.zoneName || alert.id
+      if (!renderedZoneKeys.has(zoneKey)) {
+        renderedZoneKeys.add(zoneKey)
+
+        // 1. Retrieve the EXACT Civil Aeronautics Administration (CAA) Polygon Geometry
+        // 不是畫圈圈，直接呈現真實法定禁限航區多邊形！
+        let zoneGeom = getRealCaaZoneGeometry(alert.zoneName || '')
+        if (!zoneGeom && alert.id) {
+          zoneGeom = getRealCaaZoneGeometry(alert.id)
+        }
+
+        if (zoneGeom) {
+          const zoneFeature = new Feature({
+            geometry: zoneGeom,
+            id: `threat-zone-${alert.id}`,
+          })
+          zoneFeature.setStyle(createThreatZoneStyles(alert))
+          this.threatZoneSource.addFeature(zoneFeature)
+        }
+      }
+
+      // 2. Dynamic Trajectory Ray pointing from the offending drone towards the threatened zone center
+      const drone = this.droneMap.get(alert.droneAId)
+      if (drone && alert.zoneCenter) {
+        const dronePosProj = fromLonLat(drone.currentLonLat)
+        const zoneCenterProj = fromLonLat(alert.zoneCenter)
+        const rayFeature = new Feature({
+          geometry: new LineString([dronePosProj, zoneCenterProj]),
+        })
+        rayFeature.setStyle(createThreatConnectorStyle(alert))
+        this.threatZoneSource.addFeature(rayFeature)
+      }
     })
   }
 
@@ -809,27 +887,28 @@ export class DroneManager {
         operator: '地籍測量資訊中心',
         missionType: '寶山水資源高精地籍測繪 (循環示範：誤闖禁航區)',
         status: '任務巡檢',
-        latitude: 24.750,
-        longitude: 121.026,
+        latitude: 24.7525,
+        longitude: 121.0295,
         altitudeAglMeters: 72,
         altitudeAglFeet: 236,
         airspaceZone: 'green',
         maxLegalAltitudeMeters: 120,
         zoneName: '寶山非管制空域',
         speedKmh: 42,
-        heading: 65,
+        heading: 70,
         verticalRateMps: 0,
         batteryPercent: 84,
         linkQuality: 97,
         satellites: 26,
-        homeCoordinate: [121.026, 24.750],
-        // Autonomous continuous loop: enters CAA 寶山淨水廠 300m No-Fly Red Zone (121.0354, 24.7543), then exits and repeats
+        homeCoordinate: [121.0295, 24.7525],
+        // Autonomous continuous loop (~75s): Safe -> Approaching (Stage 1) -> Breached Red Zone (Stage 2) -> Exiting & Cleared -> Repeat
         waypoints: [
-          [121.026, 24.750], // Outside Red Zone (compliant)
-          [121.0345, 24.7540], // Deep inside 寶山淨水廠 300m Red Zone (triggers 誤闖禁航區警報!)
-          [121.0370, 24.7555], // Inside Red Zone (alert active)
-          [121.0440, 24.7510], // Exits Red Zone (recovers, alert clears)
-          [121.0310, 24.7460], // Outside Red Zone
+          [121.0295, 24.7525], // Safe outside 350m buffer (~630m to center, ~330m to boundary) -> Clear
+          [121.0328, 24.7538], // Enters 350m buffer heading east -> Triggers Stage 1: Approaching Warning with live countdown!
+          [121.0365, 24.7546], // Deep inside 寶山淨水廠 300m Red Zone -> Triggers Stage 2: Breached Critical (Depth 300m)!
+          [121.0395, 24.7535], // Exits boundary flying away -> Alert instantly clears, threatened zone disappears!
+          [121.0350, 24.7505], // Safe compliant return corridor
+          [121.0295, 24.7525], // Loop start
         ],
         trail: [],
         lastSeen: Date.now(),
@@ -842,27 +921,28 @@ export class DroneManager {
         operator: '竹科工程監造組',
         missionType: '二三重都市計畫科技執法 (循環示範：限航區違規超高)',
         status: '任務巡檢',
-        latitude: 24.766,
-        longitude: 121.042,
-        altitudeAglMeters: 48, // Compliant <= 60m
-        altitudeAglFeet: 157,
+        latitude: 24.7660,
+        longitude: 121.0440,
+        altitudeAglMeters: 42, // Compliant <= 60m
+        altitudeAglFeet: 138,
         airspaceZone: 'yellow',
         maxLegalAltitudeMeters: 60,
         zoneName: '竹縣32 二三重限航區',
         speedKmh: 38,
-        heading: 50,
+        heading: 45,
         verticalRateMps: 0,
         batteryPercent: 79,
         linkQuality: 94,
         satellites: 24,
-        homeCoordinate: [121.042, 24.766],
-        // Autonomous continuous loop with dynamic 3D altitude: climbs up to 82m-85m in Yellow Zone (ceiling 60m), then descends to 45m and repeats
+        homeCoordinate: [121.0440, 24.7660],
+        // Autonomous continuous loop (~70s): Compliant (42m) -> Climbing Approaching (Stage 1, 56m) -> Breached Ceiling (Stage 2, 82m-85m) -> Descent Recovery (46m, Cleared) -> Repeat
         waypoints: [
-          [121.042, 24.766, 48], // Compliant <= 60m
-          [121.046, 24.772, 82], // Climbs to 82m! Exceeds Yellow Zone 60m limit by +22m (triggers 誤觸限航區上限警報!)
-          [121.051, 24.775, 85], // 85m (alert active)
-          [121.053, 24.769, 45], // Descends back to 45m (recovers <= 60m, alert clears!)
-          [121.044, 24.763, 48], // Compliant <= 60m
+          [121.0440, 24.7660, 42], // Compliant <= 60m (Clear, zone hidden)
+          [121.0475, 24.7695, 56], // Climbs to 56m -> Triggers Stage 1: Approaching Ceiling Warning (距上限僅 4m)
+          [121.0505, 24.7725, 82], // Climbs to 82m -> Triggers Stage 2: Breached Ceiling (超高幅度 +22m)
+          [121.0535, 24.7705, 85], // 85m (Critical breach active)
+          [121.0495, 24.7655, 46], // Glides down to 46m -> Recovers below 60m limit, alert clears, zone disappears!
+          [121.0440, 24.7660, 42], // Compliant loop return
         ],
         trail: [],
         lastSeen: Date.now(),

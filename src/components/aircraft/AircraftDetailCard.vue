@@ -107,9 +107,9 @@ watch(
       </svg>
     </div>
 
-    <!-- Main Card Body -->
+    <!-- Main Card Body: Stable Width (370px) to prevent layout shift and wrapping jitter -->
     <div
-      class="w-80 sm:w-88 rounded-md bg-slate-900/95 backdrop-blur-xl border border-sky-500/50 shadow-2xl shadow-sky-950/60 overflow-hidden text-slate-100 transition-all duration-150"
+      class="w-[370px] max-w-[calc(100vw-2rem)] rounded-xl bg-slate-900/95 backdrop-blur-2xl border border-sky-500/50 shadow-2xl shadow-sky-950/70 overflow-hidden text-slate-100 transition-all duration-150"
     >
       <!-- Header with dynamic altitude gradient & flight callsign -->
       <div
@@ -198,60 +198,72 @@ watch(
       <!-- Quick Telemetry Grid (2x2) -->
       <div class="p-3.5 space-y-2.5 text-sm bg-slate-900/60">
         <div class="grid grid-cols-2 gap-2.5">
-          <!-- Altitude -->
-          <div class="p-2.5 rounded-sm bg-slate-800/80 border border-slate-700/70">
-            <div class="text-slate-400 flex items-center justify-between text-sm mb-1">
-              <div class="flex items-center gap-1.5">
-                <MaterialIcon name="height" :size="16" class="text-sky-400" />
+          <!-- Altitude (Fixed Height, Tabular Numerals) -->
+          <div class="p-2.5 rounded-lg bg-slate-800/80 border border-slate-700/70 h-[86px] flex flex-col justify-between">
+            <div class="text-slate-400 flex items-center justify-between text-xs mb-1">
+              <div class="flex items-center gap-1.5 whitespace-nowrap">
+                <MaterialIcon name="height" :size="15" class="text-sky-400" />
                 <span>高度</span>
               </div>
-              <span class="text-sm font-mono text-sky-400 font-bold">{{ flightLevel }}</span>
+              <span class="text-xs font-mono text-sky-400 font-bold shrink-0 whitespace-nowrap">{{ flightLevel }}</span>
             </div>
-            <div class="font-bold text-lg font-mono text-slate-100">
-              <span v-if="aircraft.isGround" class="text-emerald-400">地面滑行</span>
-              <span v-else>{{ aircraft.altitude.toLocaleString() }} <span class="text-sm font-normal text-slate-400">ft</span></span>
+            <div class="font-bold text-xl font-mono text-slate-100 whitespace-nowrap tabular-nums leading-none">
+              <span v-if="aircraft.isGround" class="text-emerald-400 text-base font-bold">地面滑行</span>
+              <span v-else>{{ aircraft.altitude.toLocaleString() }} <span class="text-xs font-normal text-slate-400">ft</span></span>
+            </div>
+            <div class="text-[11px] font-mono text-slate-400 whitespace-nowrap tabular-nums leading-none">
+              約 {{ Math.round(aircraft.altitude * 0.3048) }} m ASL
             </div>
           </div>
 
-          <!-- Speed -->
-          <div class="p-2.5 rounded-sm bg-slate-800/80 border border-slate-700/70">
-            <div class="text-slate-400 flex items-center justify-between text-sm mb-1">
-              <div class="flex items-center gap-1.5">
-                <MaterialIcon name="speed" :size="16" class="text-amber-400" />
+          <!-- Speed (Fixed Height, Tabular Numerals) -->
+          <div class="p-2.5 rounded-lg bg-slate-800/80 border border-slate-700/70 h-[86px] flex flex-col justify-between">
+            <div class="text-slate-400 flex items-center justify-between text-xs mb-1">
+              <div class="flex items-center gap-1.5 whitespace-nowrap">
+                <MaterialIcon name="speed" :size="15" class="text-amber-400" />
                 <span>地速</span>
               </div>
-              <span class="text-sm font-mono text-slate-400">{{ speedKmh }} km/h</span>
+              <span class="text-xs font-mono text-slate-400 shrink-0 whitespace-nowrap">{{ speedKmh }} km/h</span>
             </div>
-            <div class="font-bold text-lg font-mono text-slate-100">
-              {{ aircraft.speed }} <span class="text-sm font-normal text-slate-400">kts</span>
+            <div class="font-bold text-xl font-mono text-slate-100 whitespace-nowrap tabular-nums leading-none">
+              {{ aircraft.speed }} <span class="text-xs font-normal text-slate-400">kts</span>
+            </div>
+            <div class="text-[11px] font-mono text-slate-400 whitespace-nowrap tabular-nums leading-none">
+              約 {{ Math.round((speedKmh * 1000) / 3600) }} m/s
             </div>
           </div>
 
-          <!-- Heading -->
-          <div class="p-2.5 rounded-sm bg-slate-800/80 border border-slate-700/70">
-            <div class="text-slate-400 flex items-center gap-1.5 text-sm mb-1">
-              <MaterialIcon name="navigation" :size="16" class="text-cyan-400" />
+          <!-- Heading (Fixed Height) -->
+          <div class="p-2.5 rounded-lg bg-slate-800/80 border border-slate-700/70 h-[86px] flex flex-col justify-between">
+            <div class="text-slate-400 flex items-center gap-1.5 text-xs mb-1 whitespace-nowrap">
+              <MaterialIcon name="navigation" :size="15" class="text-cyan-400" />
               <span>航向</span>
             </div>
-            <div class="font-bold text-lg font-mono flex items-center gap-1 text-slate-100">
+            <div class="font-bold text-xl font-mono flex items-center gap-1 text-slate-100 whitespace-nowrap tabular-nums leading-none">
               <span>{{ aircraft.heading.toFixed(0) }}°</span>
               <span
-                class="inline-block transform transition-transform text-cyan-400 font-bold"
+                class="inline-block transform transition-transform text-cyan-400 font-bold ml-1"
                 :style="{ transform: `rotate(${aircraft.heading}deg)` }"
               >
                 ↑
               </span>
             </div>
+            <div class="text-[11px] font-mono text-slate-400 whitespace-nowrap leading-none">
+              真實航向 True
+            </div>
           </div>
 
-          <!-- Vertical Rate -->
-          <div class="p-2.5 rounded-sm bg-slate-800/80 border border-slate-700/70">
-            <div class="text-slate-400 flex items-center gap-1.5 text-sm mb-1">
-              <MaterialIcon :name="verticalIcon" :size="16" :class="aircraft.verticalRate >= 0 ? 'text-emerald-400' : 'text-amber-400'" />
+          <!-- Vertical Rate (Fixed Height) -->
+          <div class="p-2.5 rounded-lg bg-slate-800/80 border border-slate-700/70 h-[86px] flex flex-col justify-between">
+            <div class="text-slate-400 flex items-center gap-1.5 text-xs mb-1 whitespace-nowrap">
+              <MaterialIcon :name="verticalIcon" :size="15" :class="aircraft.verticalRate >= 0 ? 'text-emerald-400' : 'text-amber-400'" />
               <span>升降率</span>
             </div>
-            <div class="font-semibold text-base font-mono leading-tight" :class="aircraft.verticalRate >= 0 ? 'text-emerald-300' : 'text-amber-300'">
+            <div class="font-bold text-base font-mono leading-none whitespace-nowrap tabular-nums" :class="aircraft.verticalRate >= 0 ? 'text-emerald-300' : 'text-amber-300'">
               {{ verticalRateText }}
+            </div>
+            <div class="text-[11px] font-mono text-slate-400 whitespace-nowrap leading-none">
+              垂直速度 V/S
             </div>
           </div>
         </div>

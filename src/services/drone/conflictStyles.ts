@@ -82,3 +82,75 @@ export function createConflictPointStyle(
     }),
   ]
 }
+
+/**
+ * Visual styling for dynamic threatened airspace zones (即將誤觸或已入侵的禁限航區)
+ */
+export function createThreatZoneStyles(
+  risk: import('./collisionTypes').CollisionRisk
+): Style[] {
+  const isNoFly = risk.type === 'no-fly-zone'
+  const isBreached = risk.stage === 'breached'
+
+  let fillColor = 'rgba(249, 115, 22, 0.22)'
+  let strokeColor = '#f97316'
+  let outerGlowColor = 'rgba(249, 115, 22, 0.35)'
+
+  if (isNoFly) {
+    if (isBreached) {
+      fillColor = 'rgba(239, 68, 68, 0.32)'
+      strokeColor = '#ef4444'
+      outerGlowColor = 'rgba(239, 68, 68, 0.45)'
+    }
+  } else {
+    // Altitude violation in Restricted Yellow Zone
+    if (isBreached) {
+      fillColor = 'rgba(234, 179, 8, 0.28)'
+      strokeColor = '#ef4444'
+      outerGlowColor = 'rgba(239, 68, 68, 0.35)'
+    } else {
+      fillColor = 'rgba(234, 179, 8, 0.20)'
+      strokeColor = '#eab308'
+      outerGlowColor = 'rgba(234, 179, 8, 0.35)'
+    }
+  }
+
+  return [
+    // Outer glow perimeter
+    new Style({
+      stroke: new Stroke({
+        color: outerGlowColor,
+        width: 8,
+      }),
+      zIndex: 28,
+    }),
+    // Main boundary stroke with translucent fill
+    new Style({
+      fill: new Fill({ color: fillColor }),
+      stroke: new Stroke({
+        color: strokeColor,
+        width: 3.5,
+        lineDash: [8, 5],
+      }),
+      zIndex: 29,
+    }),
+  ]
+}
+
+/**
+ * Connector ray pointing from drone to threatened zone boundary/center
+ */
+export function createThreatConnectorStyle(
+  risk: import('./collisionTypes').CollisionRisk
+): Style {
+  const isBreached = risk.stage === 'breached'
+  return new Style({
+    stroke: new Stroke({
+      color: isBreached ? '#ef4444' : '#f97316',
+      width: 2.5,
+      lineDash: [6, 4],
+    }),
+    zIndex: 30,
+  })
+}
+
