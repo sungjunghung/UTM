@@ -30,8 +30,8 @@ export class AircraftEntity {
   // Live coordinates on screen [lon, lat]
   public currentLonLat: [number, number]
 
-  // Latest verified radar coordinates from API [lon, lat]
-  private targetLonLat: [number, number]
+  // Soft reconciliation offset [dLon, dLat] to smoothly absorb GPS packet discrepancy
+  private correctionOffset: [number, number] = [0, 0]
 
   // Animated heading & rotation
   private currentHeading: number
@@ -65,7 +65,7 @@ export class AircraftEntity {
     const lon = data.lon || 0
     const lat = data.lat || 0
     this.currentLonLat = [lon, lat]
-    this.targetLonLat = [lon, lat]
+    this.correctionOffset = [0, 0]
     this.currentHeading = this.heading
     this.targetHeading = this.heading
     this.lastRenderedHeading = this.heading
@@ -128,9 +128,9 @@ export class AircraftEntity {
     }
 
     if (data.lon !== undefined && data.lat !== undefined && (data.lon !== 0 || data.lat !== 0)) {
-      const dLon = data.lon - this.targetLonLat[0]
-      const dLat = data.lat - this.targetLonLat[1]
-      const distApproxKm = Math.sqrt(dLon * dLon + dLat * dLat) * 111
+      const errLon = data.lon - this.currentLonLat[0]
+      const errLat = data.lat - this.currentLonLat[1]
+      const distApproxKm = Math.sqrt(errLon * errLon + errLat * errLat) * 111
 
       // 1. Update heading
       if (data.track !== undefined) {
@@ -138,8 +138,8 @@ export class AircraftEntity {
         this.targetHeading = data.track
       } else if (distApproxKm > 0.05) {
         const rad = Math.atan2(
-          dLon * Math.cos((data.lat * Math.PI) / 180),
-          dLat
+          errLon * Math.cos((data.lat * Math.PI) / 180),
+          errLat
         )
         const computedTrack = ((rad * 180) / Math.PI + 360) % 360
         this.heading = computedTrack
@@ -151,17 +151,14 @@ export class AircraftEntity {
         this.appendTrailPoint([data.lon, data.lat])
       }
 
-      // 3. Update target position
-      this.targetLonLat = [data.lon, data.lat]
-
-      // 4. Large teleport / signal re-acquisition (> 50 km): snap directly
-      const currentDiscrepancyKm = Math.sqrt(
-        (data.lon - this.currentLonLat[0]) * (data.lon - this.currentLonLat[0]) +
-        (data.lat - this.currentLonLat[1]) * (data.lat - this.currentLonLat[1])
-      ) * 111
-
-      if (currentDiscrepancyKm > 50) {
+      // 3. Smooth error reconciliation
+      if (distApproxKm > 40) {
+        // Large jump / signal re-acquisition: snap directly
         this.currentLonLat = [data.lon, data.lat]
+        this.correctionOffset = [0, 0]
+      } else {
+        // Gently blend discrepancy into forward flight over ~1.5s
+        this.correctionOffset = [errLon, errLat]
       }
     }
 
@@ -171,8 +168,7 @@ export class AircraftEntity {
 
   /**
    * 60 FPS Physics & Motion Controller
-   * - When no data arrives: continues flying forward smoothly at current speed and heading (NEVER freezes).
-   * - When data arrives: smoothly blends position offset via continuous spring convergence (NEVER teleports).
+   * Runs EVERY frame. Planes continuously glide forward at speed & heading.
    */
   public stepPhysics(dt: number): void {
     if (dt <= 0 || dt > 1.0) dt = 0.016
@@ -191,15 +187,17 @@ export class AircraftEntity {
       this.currentLonLat[1] += dLat
     }
 
-    // 2. Soft Spring Error Reconciliation:
-    // Gently pulls the plane toward the latest verified radar position without sudden snapping
-    const errLon = this.targetLonLat[0] - this.currentLonLat[0]
-    const errLat = this.targetLonLat[1] - this.currentLonLat[1]
+    // 2. Soft Error Reconciliation:
+    // Gently absorbs the residual GPS discrepancy without pulling backwards
+    if (Math.abs(this.correctionOffset[0]) > 0.000001 || Math.abs(this.correctionOffset[1]) > 0.000001) {
+      const blendRate = Math.min(dt * 1.5, 0.2)
+      const stepLon = this.correctionOffset[0] * blendRate
+      const stepLat = this.correctionOffset[1] * blendRate
 
-    if (Math.abs(errLon) > 0.000001 || Math.abs(errLat) > 0.000001) {
-      const blendFactor = Math.min(dt * 1.6, 0.25)
-      this.currentLonLat[0] += errLon * blendFactor
-      this.currentLonLat[1] += errLat * blendFactor
+      this.currentLonLat[0] += stepLon
+      this.currentLonLat[1] += stepLat
+      this.correctionOffset[0] -= stepLon
+      this.correctionOffset[1] -= stepLat
     }
 
     // 3. Smooth Heading Rotation

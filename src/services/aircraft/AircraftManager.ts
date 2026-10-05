@@ -288,6 +288,9 @@ export class AircraftManager {
         entity.stepPhysics(dt)
       })
 
+      // Request OpenLayers map canvas to render every animation frame!
+      this.map?.render()
+
       // Auto-follow selected flight if enabled
       if (this.selectedHex && this.followSelected && this.map) {
         const selectedEntity = this.aircraftMap.get(this.selectedHex)
