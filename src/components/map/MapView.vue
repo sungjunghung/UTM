@@ -2,12 +2,17 @@
 import { ref, onMounted, onUnmounted } from 'vue'
 import { MapManager } from '../../services/map/MapManager'
 import type { BaseLayerType } from '../../services/map/types'
+import { AircraftManager } from '../../services/aircraft/AircraftManager'
+import type { AircraftInfo } from '../../services/aircraft/types'
 import MapToolbar from './MapToolbar.vue'
 import MapStatusOverlay from './MapStatusOverlay.vue'
+import AircraftDetailCard from '../aircraft/AircraftDetailCard.vue'
+import AircraftRadarWidget from '../aircraft/AircraftRadarWidget.vue'
 import MaterialIcon from '../MaterialIcon.vue'
 
 const mapTarget = ref<HTMLDivElement | null>(null)
 let mapManager: MapManager | null = null
+let aircraftManager: AircraftManager | null = null
 
 // Reactive state
 const activeLayer = ref<BaseLayerType>('osm')
@@ -15,6 +20,14 @@ const mouseCoord = ref<[number, number] | null>(null)
 const centerCoord = ref<[number, number]>([120.982, 23.838])
 const currentZoom = ref(8)
 const clickToast = ref<string | null>(null)
+
+// Aircraft state
+const aircraftList = ref<AircraftInfo[]>([])
+const selectedAircraft = ref<AircraftInfo | null>(null)
+const isFollowingFlight = ref(false)
+const isAircraftLoading = ref(false)
+const aircraftError = ref<string | null>(null)
+const showTrails = ref(true)
 
 let unsubPointer: (() => void) | null = null
 let unsubClick: (() => void) | null = null
@@ -24,7 +37,7 @@ let resizeObserver: ResizeObserver | null = null
 onMounted(() => {
   if (!mapTarget.value) return
 
-  // Instantiate OOP MapManager
+  // 1. Instantiate OOP MapManager
   mapManager = new MapManager({
     center: [120.982, 23.838],
     zoom: 8,
@@ -34,7 +47,45 @@ onMounted(() => {
   // Initialize onto target DOM element
   mapManager.initialize(mapTarget.value)
 
-  // Listen to OOP events
+  // 2. Instantiate OOP AircraftManager and attach to OpenLayers map
+  const olMap = mapManager.getMap()
+  if (olMap) {
+    aircraftManager = new AircraftManager({
+      centerLat: 23.838,
+      centerLon: 120.982,
+      radiusNm: 250,
+      pollIntervalMs: 4000,
+      showTrails: showTrails.value,
+    })
+
+    aircraftManager.attachToMap(olMap)
+
+    aircraftManager.onUpdate((list) => {
+      aircraftList.value = list
+      if (selectedAircraft.value) {
+        const updated = list.find((a) => a.hex === selectedAircraft.value?.hex)
+        if (updated) selectedAircraft.value = updated
+      }
+    })
+
+    aircraftManager.onSelect((info) => {
+      selectedAircraft.value = info
+      if (!info) {
+        isFollowingFlight.value = false
+        aircraftManager?.setFollowSelected(false)
+      }
+    })
+
+    aircraftManager.onLoading((loading) => {
+      isAircraftLoading.value = loading
+    })
+
+    aircraftManager.onError((err) => {
+      aircraftError.value = err
+    })
+  }
+
+  // 3. Listen to Map events
   unsubPointer = mapManager.onPointerMove((coords) => {
     mouseCoord.value = coords
   })
@@ -45,16 +96,18 @@ onMounted(() => {
   })
 
   unsubClick = mapManager.onClick((coords) => {
-    if (!mapManager) return
-    mapManager.addMarker({
-      coordinate: coords,
-      title: `標記 (${coords[0].toFixed(3)}, ${coords[1].toFixed(3)})`,
-      color: '#06b6d4',
-    })
-    showToast(`已在 [${coords[0]}, ${coords[1]}] 建立標記`)
+    // If not clicking on an aircraft, can drop standard marker
+    if (!selectedAircraft.value && mapManager) {
+      mapManager.addMarker({
+        coordinate: coords,
+        title: `標記 (${coords[0].toFixed(3)}, ${coords[1].toFixed(3)})`,
+        color: '#06b6d4',
+      })
+      showToast(`已在 [${coords[0]}, ${coords[1]}] 建立標記`)
+    }
   })
 
-  // Watch container size changes for perfect responsive map
+  // Watch container size changes for responsive map
   resizeObserver = new ResizeObserver(() => {
     mapManager?.updateSize()
   })
@@ -74,10 +127,42 @@ onUnmounted(() => {
   unsubClick?.()
   unsubView?.()
   resizeObserver?.disconnect()
+  aircraftManager?.destroy()
   mapManager?.destroy()
+  aircraftManager = null
   mapManager = null
 })
 
+// Aircraft Controls
+function handleSelectFlight(hex: string) {
+  aircraftManager?.selectAircraft(hex)
+}
+
+function handleCloseDetail() {
+  aircraftManager?.selectAircraft(null)
+  selectedAircraft.value = null
+  isFollowingFlight.value = false
+  aircraftManager?.setFollowSelected(false)
+}
+
+function handleToggleFollow() {
+  isFollowingFlight.value = !isFollowingFlight.value
+  aircraftManager?.setFollowSelected(isFollowingFlight.value)
+  showToast(isFollowingFlight.value ? '已開啟視角鎖定追蹤' : '已關閉視角鎖定')
+}
+
+function handleToggleTrails() {
+  showTrails.value = !showTrails.value
+  aircraftManager?.toggleTrails(showTrails.value)
+  showToast(showTrails.value ? '已開啟飛行尾跡' : '已關閉飛行尾跡')
+}
+
+function handleRefreshAircraft() {
+  aircraftManager?.start()
+  showToast('正在重新載入空域航班...')
+}
+
+// Map Controls
 function handleZoomIn() {
   mapManager?.zoomIn()
 }
@@ -135,7 +220,20 @@ function showToast(msg: string) {
       tabindex="0"
     ></div>
 
-    <!-- Floating Top-Right Map Toolbar -->
+    <!-- Floating Top-Left Radar Status & Search Widget -->
+    <aside class="absolute top-20 left-4 z-20">
+      <AircraftRadarWidget
+        :aircraft-list="aircraftList"
+        :is-loading="isAircraftLoading"
+        :error="aircraftError"
+        :show-trails="showTrails"
+        @select-flight="handleSelectFlight"
+        @toggle-trails="handleToggleTrails"
+        @refresh="handleRefreshAircraft"
+      />
+    </aside>
+
+    <!-- Floating Top-Right Map Controls Toolbar -->
     <aside class="absolute top-20 right-4 z-20">
       <MapToolbar
         :active-layer="activeLayer"
@@ -149,6 +247,16 @@ function showToast(msg: string) {
       />
     </aside>
 
+    <!-- Floating Flight Detail Card (Bottom-Right or Center-Right) -->
+    <aside v-if="selectedAircraft" class="absolute bottom-16 right-4 sm:bottom-20 sm:right-6 z-30">
+      <AircraftDetailCard
+        :aircraft="selectedAircraft"
+        :is-following="isFollowingFlight"
+        @close="handleCloseDetail"
+        @toggle-follow="handleToggleFollow"
+      />
+    </aside>
+
     <!-- Floating Bottom Status Bar (Coordinates & UTM Zone) -->
     <div class="absolute bottom-4 left-36 z-20 hidden md:block">
       <MapStatusOverlay
@@ -156,14 +264,6 @@ function showToast(msg: string) {
         :center-coord="centerCoord"
         :zoom="currentZoom"
       />
-    </div>
-
-    <!-- Floating Helper Tip -->
-    <div class="absolute top-20 left-4 z-20 pointer-events-none hidden sm:block">
-      <div class="px-3 py-1.5 rounded-xl bg-base-100/80 backdrop-blur-md border border-base-300 shadow-md text-xs text-base-content/80 flex items-center gap-2">
-        <MaterialIcon name="mouse" :size="16" class="text-primary" />
-        <span>點擊地圖任意位置可新增地標</span>
-      </div>
     </div>
 
     <!-- Notification Toast -->

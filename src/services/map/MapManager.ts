@@ -117,6 +117,10 @@ export class MapManager {
 
   // --- Public APIs ---
 
+  public getMap(): Map | null {
+    return this.map
+  }
+
   public onPointerMove(callback: (lonLat: [number, number] | null) => void): () => void {
     this.pointerMoveCallbacks.add(callback)
     return () => this.pointerMoveCallbacks.delete(callback)
