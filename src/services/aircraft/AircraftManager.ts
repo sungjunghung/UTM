@@ -48,7 +48,7 @@ export class AircraftManager {
     this.centerLat = options.centerLat ?? 23.838 // Center Taiwan
     this.centerLon = options.centerLon ?? 120.982
     this.radiusNm = options.radiusNm ?? 250
-    this.pollIntervalMs = options.pollIntervalMs ?? 4000
+    this.pollIntervalMs = options.pollIntervalMs ?? 5000
     this.showTrails = options.showTrails ?? true
 
     // Initialize layers
@@ -119,24 +119,37 @@ export class AircraftManager {
     }
   }
 
+  private isFetching: boolean = false
+  private cooldownUntil: number = 0
+
   private async fetchData(): Promise<void> {
+    if (this.isFetching) return
+    if (Date.now() < this.cooldownUntil) return
+
+    this.isFetching = true
     this.notifyLoading(true)
-    this.notifyError(null)
 
     try {
       const endpoint = `/api/adsb/v2/point/${this.centerLat}/${this.centerLon}/${this.radiusNm}`
       const response = await fetch(endpoint)
+      if (response.status === 429) {
+        // Rate limited: back off for 6 seconds
+        this.cooldownUntil = Date.now() + 6000
+        this.notifyError('API 請求過於頻繁，等待緩衝冷卻中...')
+        return
+      }
       if (!response.ok) {
         throw new Error(`ADS-B API returned HTTP ${response.status}`)
       }
       const data: AdsbResponse = await response.json()
       const aircrafts = data.ac || []
 
+      this.notifyError(null)
       this.processData(aircrafts)
     } catch (err: any) {
-      console.warn('ADS-B fetch error:', err)
       this.notifyError(err.message || '無法取得飛機即時數據')
     } finally {
+      this.isFetching = false
       this.notifyLoading(false)
     }
   }
