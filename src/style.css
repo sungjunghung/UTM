@@ -15,24 +15,12 @@ body,
   overflow: hidden;
 }
 
-/* OpenLayers scale line positioned on the right with modern translucent design */
+/* Move OpenLayers scale bar & scale line to bottom right while keeping original look */
+.ol-scale-bar,
 .ol-scale-line {
-  background: rgba(15, 23, 42, 0.85) !important;
-  backdrop-filter: blur(8px);
-  border-radius: 6px !important;
-  padding: 4px 8px !important;
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  bottom: 14px !important;
   left: auto !important;
   right: 16px !important;
-  z-index: 20;
-}
-
-.ol-scale-line-inner {
-  border-color: #e2e8f0 !important;
-  color: #f8fafc !important;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  font-size: 11px !important;
+  bottom: 16px !important;
 }
 
 /* Remove bottom right attribution text */
