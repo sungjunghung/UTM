@@ -5,9 +5,9 @@ import type { BaseLayerType } from './types'
 
 export class LayerManager {
   private baseLayers: Map<BaseLayerType, TileLayer<OSM | XYZ>> = new Map()
-  private currentType: BaseLayerType = 'carto-dark'
+  private currentType: BaseLayerType = 'osm-dark'
 
-  constructor(defaultType: BaseLayerType = 'carto-dark') {
+  constructor(defaultType: BaseLayerType = 'osm-dark') {
     this.currentType = defaultType
     this.initBaseLayers()
   }

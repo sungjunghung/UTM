@@ -38,12 +38,12 @@ const presets = [
 ]
 
 const layerOptions: { type: BaseLayerType; label: string; icon: string }[] = [
-  { type: 'carto-dark', label: '暗夜雷達 (Carto, 免Key)', icon: 'dark_mode' },
-  { type: 'nlsc-gray', label: '臺灣電子地圖灰階 (內政部, 免Key)', icon: 'domain' },
-  { type: 'osm-dark', label: 'OSM 開源暗夜 (本地濾鏡, 免Key)', icon: 'radar' },
-  { type: 'carto-light', label: '極簡淺灰 (日間, 免Key)', icon: 'light_mode' },
-  { type: 'opentopo', label: '等高地形 (Topo, 免Key)', icon: 'terrain' },
-  { type: 'osm', label: '標準街道 (OSM, 免Key)', icon: 'map' },
+  { type: 'osm-dark', label: '開源暗夜雷達 (預設, 零商業依賴)', icon: 'radar' },
+  { type: 'nlsc-gray', label: '臺灣電子地圖灰階 (內政部官方)', icon: 'domain' },
+  { type: 'carto-dark', label: 'Carto 暗夜 (免Key)', icon: 'dark_mode' },
+  { type: 'carto-light', label: 'Carto 極簡灰 (免Key)', icon: 'light_mode' },
+  { type: 'opentopo', label: '等高地形圖 (Topo)', icon: 'terrain' },
+  { type: 'osm', label: '標準街道圖 (OSM)', icon: 'map' },
 ]
 </script>
 

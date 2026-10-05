@@ -15,7 +15,7 @@ let mapManager: MapManager | null = null
 let aircraftManager: AircraftManager | null = null
 
 // Reactive state
-const activeLayer = ref<BaseLayerType>('carto-dark')
+const activeLayer = ref<BaseLayerType>('osm-dark')
 const mouseCoord = ref<[number, number] | null>(null)
 const centerCoord = ref<[number, number]>([120.982, 23.838])
 const currentZoom = ref(8)
@@ -221,7 +221,7 @@ function showToast(msg: string) {
     <!-- OpenLayers Map Viewport (Matches Window 100% W & H) -->
     <div
       ref="mapTarget"
-      class="absolute inset-0 w-full h-full cursor-default focus:outline-none"
+      class="absolute inset-0 w-full h-full cursor-default focus:outline-none bg-[#12161f]"
       tabindex="0"
     ></div>
 
