@@ -49,24 +49,34 @@ const filteredList = computed(() => {
   <div class="flex flex-col items-start gap-1.5 select-none">
     <!-- Status Pill -->
     <div
-      class="flex items-center gap-2 p-1 pl-2.5 pr-1.5 rounded-md bg-base-100/95 backdrop-blur-md border border-cyan-500/40 shadow-lg transition-all"
-      :class="{ 'opacity-60': !showDrones }"
+      class="flex items-center gap-1.5 p-1 pl-2.5 pr-1.5 rounded-md bg-base-100/95 backdrop-blur-md border shadow-lg transition-all"
+      :class="showDrones ? 'border-cyan-500/50 shadow-cyan-950/20' : 'border-base-300 opacity-60'"
     >
       <!-- Drone Pulse Indicator (Cyan) -->
       <div class="relative flex items-center justify-center w-3 h-3">
         <span
+          v-if="showDrones"
           class="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 bg-cyan-400"
         ></span>
-        <span class="relative inline-flex rounded-full h-2 w-2 bg-cyan-500"></span>
+        <span
+          class="relative inline-flex rounded-full h-2 w-2"
+          :class="showDrones ? 'bg-cyan-500' : 'bg-base-content/40'"
+        ></span>
       </div>
 
-      <div class="text-sm font-semibold flex items-center gap-2" title="空域即時在空無人機 (UAV / Drone)">
-        <span class="text-base-content/80">空域即時無人機:</span>
-        <span class="font-mono font-bold text-base text-cyan-400">{{ droneList.length }}</span>
-        <span class="text-base-content/70 text-sm">架</span>
-      </div>
+      <!-- Drone Title & Main Layer Toggle Button -->
+      <button
+        class="flex items-center gap-2 text-sm font-bold transition-colors cursor-pointer"
+        :class="showDrones ? 'text-cyan-400 hover:text-cyan-300' : 'text-base-content/70 hover:text-base-content'"
+        title="點擊開關空域即時無人機圖層"
+        @click="emit('toggleDrones')"
+      >
+        <MaterialIcon name="toys" :size="18" :class="showDrones ? 'text-cyan-400' : 'text-base-content/40'" />
+        <span class="tracking-wide">空域即時無人機</span>
+        <span v-if="showDrones" class="font-mono font-bold text-sm text-cyan-400">{{ droneList.length }} 架</span>
+      </button>
 
-      <div class="divider divider-horizontal mx-0.5 h-4"></div>
+      <div class="w-px h-4 bg-base-content/20 mx-0.5"></div>
 
       <!-- Action: Toggle Search List -->
       <button
@@ -76,16 +86,6 @@ const filteredList = computed(() => {
         @click="isSearchOpen = !isSearchOpen"
       >
         <MaterialIcon name="toys" :size="18" />
-      </button>
-
-      <!-- Action: Toggle Visibility -->
-      <button
-        class="btn btn-sm btn-ghost btn-circle"
-        :class="{ 'text-cyan-400': showDrones, 'text-base-content/40': !showDrones }"
-        :title="showDrones ? '隱藏無人機圖層' : '顯示無人機圖層'"
-        @click="emit('toggleDrones')"
-      >
-        <MaterialIcon :name="showDrones ? 'visibility' : 'visibility_off'" :size="18" />
       </button>
 
       <!-- Action: Collision Alerts (CPA) Button -->
@@ -131,10 +131,10 @@ const filteredList = computed(() => {
         <span class="text-sm font-semibold">{{ isSimulatingConflict ? '還原巡檢' : '模擬碰撞' }}</span>
       </button>
 
-      <!-- Action: Center on Drone Operations Hub (NCHC) -->
+      <!-- Action: Center on Drone Operations Hub -->
       <button
         class="btn btn-sm btn-ghost btn-circle text-cyan-400"
-        title="視角移至新竹國網無人機空域"
+        title="視角移至合法空域無人機作業群"
         @click="emit('focusDroneZone')"
       >
         <MaterialIcon name="my_location" :size="18" />

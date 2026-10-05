@@ -74,14 +74,8 @@ function resetAllFilters() {
         title="點擊開關民航局禁限航區圖層"
         @click="emit('toggleAirspace')"
       >
-        <MaterialIcon name="gpp_bad" :size="18" class="text-rose-400" />
+        <MaterialIcon name="gpp_bad" :size="18" :class="showAirspace ? 'text-rose-400' : 'text-base-content/40'" />
         <span class="tracking-wide">民航局禁限航區</span>
-        <span
-          class="badge badge-sm rounded-sm font-mono font-bold text-xs border"
-          :class="showAirspace ? 'badge-error text-white border-rose-400/50' : 'badge-ghost opacity-60'"
-        >
-          {{ showAirspace ? '開啟' : '關閉' }}
-        </span>
       </button>
 
       <!-- Loading Spinner Indicator when fetching tiles -->

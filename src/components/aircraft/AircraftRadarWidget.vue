@@ -52,38 +52,41 @@ const altitudeLegends = [
   <div class="flex flex-col items-start gap-1.5 select-none">
     <!-- Status Pill -->
     <div
-      class="flex items-center gap-2 p-1 pl-2.5 pr-1.5 rounded-md bg-base-100/95 backdrop-blur-md border border-base-300 shadow-lg transition-all"
-      :class="{ 'opacity-60 border-dashed': !showAircraft }"
+      class="flex items-center gap-1.5 p-1 pl-2.5 pr-1.5 rounded-md bg-base-100/95 backdrop-blur-md border shadow-lg transition-all"
+      :class="showAircraft ? 'border-primary/50 shadow-primary/20' : 'border-base-300 opacity-60'"
     >
       <!-- Radar Pulse Indicator -->
       <div class="relative flex items-center justify-center w-3 h-3">
         <span
+          v-if="showAircraft"
           class="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75"
-          :class="error ? 'bg-error' : isLoading ? 'bg-warning' : showAircraft ? 'bg-success' : 'bg-base-content/30'"
+          :class="error ? 'bg-error' : isLoading ? 'bg-warning' : 'bg-emerald-400'"
         ></span>
         <span
           class="relative inline-flex rounded-full h-2 w-2"
-          :class="error ? 'bg-error' : isLoading ? 'bg-warning' : showAircraft ? 'bg-success' : 'bg-base-content/30'"
+          :class="error ? 'bg-error' : isLoading ? 'bg-warning' : showAircraft ? 'bg-emerald-500' : 'bg-base-content/40'"
         ></span>
       </div>
 
-      <div class="text-sm font-semibold flex items-center gap-2" title="空域即時在空航班與航機">
-        <span class="text-base-content/80">空域即時航班:</span>
-        <span class="font-mono font-bold text-base" :class="showAircraft ? 'text-primary' : 'text-base-content/50'">{{ aircraftList.length }}</span>
-        <span class="text-base-content/70 text-sm">架</span>
-      </div>
-
-      <div class="divider divider-horizontal mx-0.5 h-4"></div>
-
-      <!-- Action: Toggle Visibility (Direct on top bar) -->
+      <!-- Aircraft Title & Main Layer Toggle Button -->
       <button
-        class="btn btn-sm btn-ghost btn-circle"
-        :class="{ 'text-primary': showAircraft, 'text-base-content/40': !showAircraft }"
-        :title="showAircraft ? '隱藏空域即時航班圖層' : '顯示空域即時航班圖層'"
+        class="flex items-center gap-2 text-sm font-bold transition-colors cursor-pointer"
+        :class="showAircraft ? 'text-primary hover:text-primary-focus' : 'text-base-content/70 hover:text-base-content'"
+        title="點擊開關空域即時航班圖層"
         @click="emit('toggleAircraft')"
       >
-        <MaterialIcon :name="showAircraft ? 'visibility' : 'visibility_off'" :size="18" />
+        <MaterialIcon name="flight" :size="18" :class="showAircraft ? 'text-primary' : 'text-base-content/40'" />
+        <span class="tracking-wide">空域即時航班</span>
+        <span v-if="showAircraft" class="font-mono font-bold text-sm text-primary">{{ aircraftList.length }} 架</span>
       </button>
+
+      <!-- Loading Spinner Indicator when fetching tiles / data -->
+      <div v-if="isLoading" class="flex items-center gap-1.5 px-1 text-sm text-amber-400 animate-pulse">
+        <MaterialIcon name="sync" :size="15" class="animate-spin" />
+        <span class="hidden sm:inline font-mono">載入中</span>
+      </div>
+
+      <div class="w-px h-4 bg-base-content/20 mx-0.5"></div>
 
       <!-- Action: Toggle Search List -->
       <button

@@ -57,7 +57,7 @@ const collisionRisks = ref<CollisionRisk[]>([])
 const isSimulatingConflict = ref(false)
 
 // Airspace state (Civil Aeronautics Administration CAA UAV Red/Yellow Zones)
-const showAircraft = ref(true)
+const showAircraft = ref(false) // 航班預設關閉
 const showDrones = ref(true)
 const showAirspace = ref(true)
 const isAirspaceLoading = ref(false)
@@ -100,9 +100,11 @@ onMounted(() => {
       radiusNm: 120,
       pollIntervalMs: 3000,
       showTrails: showTrails.value,
+      autoStart: false, // 航班預設關閉，開啟才取資訊
     })
 
     aircraftManager.attachToMap(olMap)
+    aircraftManager.toggleLayer(false)
 
     // Mount aircraft detail card overlay to OpenLayers map
     if (detailOverlayTarget.value) {
@@ -360,10 +362,12 @@ function handleToggleAircraft() {
   showAircraft.value = !showAircraft.value
   aircraftManager?.toggleLayer(showAircraft.value)
   if (!showAircraft.value) {
+    aircraftManager?.stop() // 關閉就不再取資訊
     handleCloseDetail()
-    showToast('已隱藏空域即時航班圖層')
+    showToast('已關閉空域即時航班資訊')
   } else {
-    showToast('已顯示空域即時航班圖層')
+    aircraftManager?.start() // 開啟才取資訊
+    showToast('已開啟空域即時航班資訊')
   }
 }
 
@@ -371,10 +375,12 @@ function handleToggleDrones() {
   showDrones.value = !showDrones.value
   droneManager?.toggleLayer(showDrones.value)
   if (!showDrones.value) {
+    droneManager?.stop() // 關閉就不再運算/模擬
     handleCloseDroneDetail()
-    showToast('已隱藏空域即時無人機圖層')
+    showToast('已關閉空域即時無人機圖層')
   } else {
-    showToast('已顯示空域即時無人機圖層')
+    droneManager?.start() // 開啟才運算與監控
+    showToast('已開啟空域即時無人機圖層')
   }
 }
 

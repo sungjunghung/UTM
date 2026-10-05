@@ -14,6 +14,7 @@ export interface AircraftManagerOptions {
   radiusNm?: number // nautical miles
   pollIntervalMs?: number
   showTrails?: boolean
+  autoStart?: boolean
 }
 
 export class AircraftManager {
@@ -36,6 +37,7 @@ export class AircraftManager {
   private radiusNm: number
   private pollIntervalMs: number
   private showTrails: boolean = true
+  private autoStart: boolean = true
 
   // State
   private pollTimer: ReturnType<typeof setInterval> | null = null
@@ -66,6 +68,7 @@ export class AircraftManager {
     this.radiusNm = options.radiusNm ?? 120
     this.pollIntervalMs = options.pollIntervalMs ?? 5000
     this.showTrails = options.showTrails ?? true
+    this.autoStart = options.autoStart ?? true
 
     // Initialize layers
     this.trailLayer = new VectorLayer({
@@ -163,8 +166,10 @@ export class AircraftManager {
     // Initial filter pass
     this.updateViewportFiltering()
 
-    // Start background polling & 60fps velocity animation loop
-    this.start()
+    // Start background polling & 60fps velocity animation loop only if autoStart
+    if (this.autoStart) {
+      this.start()
+    }
   }
 
   public clearHover(): void {
@@ -179,7 +184,9 @@ export class AircraftManager {
     if (document.hidden) {
       this.stop()
     } else {
-      this.start()
+      if (this.planeLayer.getVisible()) {
+        this.start()
+      }
     }
   }
 
