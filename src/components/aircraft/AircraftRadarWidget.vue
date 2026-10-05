@@ -70,7 +70,7 @@ const altitudeLegends = [
       <div class="text-xs font-semibold flex items-center gap-1.5" title="空域即時在空航班與航機">
         <span class="text-base-content/70">空域即時航班:</span>
         <span class="font-mono font-bold" :class="showAircraft ? 'text-primary' : 'text-base-content/50'">{{ aircraftList.length }}</span>
-        <span class="text-base-content/60 text-[11px]">架</span>
+        <span class="text-base-content/60 text-xs">架</span>
       </div>
 
       <div class="divider divider-horizontal mx-0.5 h-4"></div>
@@ -172,17 +172,17 @@ const altitudeLegends = [
                 <span class="font-bold font-mono leading-none">{{ ac.flight || ac.hex.toUpperCase() }}</span>
                 <span
                   v-if="flightInfoService.getAirline(ac.flight)"
-                  class="badge badge-xs bg-sky-400/20 text-sky-400 border-none text-[9px] px-1"
+                  class="badge badge-sm bg-sky-400/20 text-sky-400 border-none text-xs px-1.5"
                 >
                   {{ flightInfoService.getAirline(ac.flight)!.nameZh }}
                 </span>
               </div>
-              <div class="text-[10px] opacity-70 mt-0.5">{{ ac.model }} · {{ ac.registration }}</div>
+              <div class="text-xs opacity-70 mt-0.5">{{ ac.model }} · {{ ac.registration }}</div>
             </div>
           </div>
-          <div class="text-right font-mono text-[11px] flex-shrink-0">
+          <div class="text-right font-mono text-xs flex-shrink-0">
             <div>{{ ac.altitude.toLocaleString() }} ft</div>
-            <div class="text-[10px] opacity-70">{{ ac.speed }} kts</div>
+            <div class="text-xs opacity-70">{{ ac.speed }} kts</div>
           </div>
         </button>
 
@@ -198,12 +198,12 @@ const altitudeLegends = [
       class="rounded-md bg-base-100/98 backdrop-blur-md border border-base-300 shadow-2xl p-2.5 text-xs space-y-1.5 animate-in fade-in duration-100"
     >
       <div class="flex items-center justify-between pb-1 border-b border-base-300">
-        <span class="font-bold text-[11px] text-base-content/70">高度顏色分級 (Altitude)</span>
+        <span class="font-bold text-xs text-base-content/70">高度顏色分級 (Altitude)</span>
         <button class="btn btn-xs btn-circle btn-ghost" @click="isLegendOpen = false">
           <MaterialIcon name="close" :size="13" />
         </button>
       </div>
-      <div class="space-y-1 font-mono text-[11px]">
+      <div class="space-y-1 font-mono text-xs">
         <div v-for="leg in altitudeLegends" :key="leg.label" class="flex items-center gap-2">
           <span class="w-2.5 h-2.5 rounded-sm flex-shrink-0" :style="{ background: leg.color }"></span>
           <span>{{ leg.label }}</span>

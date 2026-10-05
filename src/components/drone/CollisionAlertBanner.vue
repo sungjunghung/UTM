@@ -50,68 +50,68 @@ const sortedRisks = computed(() => {
         "
       >
         <!-- Top bar: Alert index, header, drone pair & live countdown -->
-        <div class="flex items-center justify-between gap-2.5">
-          <div class="flex items-center gap-2 min-w-0">
+        <div class="flex items-center justify-between gap-3">
+          <div class="flex items-center gap-2.5 min-w-0">
             <div
-              class="w-5 h-5 rounded-sm flex items-center justify-center flex-shrink-0"
+              class="w-6 h-6 rounded-sm flex items-center justify-center flex-shrink-0"
               :class="risk.severity === 'critical' ? 'bg-rose-500 text-white' : 'bg-amber-500 text-amber-950'"
             >
-              <MaterialIcon :name="risk.severity === 'critical' ? 'report' : 'warning'" :size="14" />
+              <MaterialIcon :name="risk.severity === 'critical' ? 'report' : 'warning'" :size="16" />
             </div>
             <div class="min-w-0">
-              <div class="flex items-center gap-1.5">
+              <div class="flex items-center gap-2">
                 <span
-                  class="font-black text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded-sm"
+                  class="font-black text-xs uppercase tracking-wider px-2 py-0.5 rounded-sm"
                   :class="risk.severity === 'critical' ? 'bg-rose-500/40 text-rose-200' : 'bg-amber-500/30 text-amber-200'"
                 >
                   {{ risk.severity === 'critical' ? '🔴 空域緊急碰撞 (CRITICAL)' : '🟠 衝突接近警戒' }}
                 </span>
-                <span v-if="sortedRisks.length > 1" class="badge badge-xs rounded-sm font-mono text-[9px] bg-black/40 border border-white/20 text-white/90">
+                <span v-if="sortedRisks.length > 1" class="badge badge-sm rounded-sm font-mono text-xs bg-black/40 border border-white/20 text-white/90">
                   警訊 #{{ idx + 1 }}
                 </span>
-                <span class="text-[11px] font-bold truncate font-mono text-white">
-                  {{ risk.droneACallsign }} <span class="text-rose-400 font-extrabold">⚡</span> {{ risk.droneBCallsign }}
+                <span class="text-sm font-bold truncate font-mono text-white">
+                  {{ risk.droneACallsign }} <span class="text-rose-400 font-black">⚡</span> {{ risk.droneBCallsign }}
                 </span>
               </div>
             </div>
           </div>
 
           <!-- Countdown, Distance & Focus Button -->
-          <div class="flex items-center gap-1.5 flex-shrink-0">
+          <div class="flex items-center gap-2 flex-shrink-0">
             <!-- CPA Countdown Badge -->
             <div
-              class="px-2 py-0.5 rounded-sm text-center font-mono"
+              class="px-2.5 py-1 rounded-sm text-center font-mono"
               :class="risk.severity === 'critical' ? 'bg-rose-500 text-white' : 'bg-amber-500 text-amber-950'"
             >
-              <div class="text-[7px] uppercase font-bold opacity-80 leading-none">預估交會</div>
-              <div class="text-[11px] font-black leading-tight">{{ risk.timeToCpaSeconds }}s</div>
+              <div class="text-xs uppercase font-bold opacity-80 leading-none">預估交會</div>
+              <div class="text-sm font-black leading-tight mt-0.5">{{ risk.timeToCpaSeconds }}s</div>
             </div>
 
             <!-- CPA Distance Badge -->
-            <div class="px-2 py-0.5 rounded-sm bg-black/60 text-center font-mono border border-white/20">
-              <div class="text-[7px] uppercase opacity-70 leading-none">最近距離</div>
-              <div class="text-[11px] font-black text-cyan-300 leading-tight">{{ risk.cpaDistanceMeters }}m</div>
+            <div class="px-2.5 py-1 rounded-sm bg-black/60 text-center font-mono border border-white/20">
+              <div class="text-xs uppercase opacity-70 leading-none">最近距離</div>
+              <div class="text-sm font-black text-cyan-300 leading-tight mt-0.5">{{ risk.cpaDistanceMeters }}m</div>
             </div>
 
             <!-- Focus Button -->
             <button
-              class="btn btn-xs rounded-sm bg-white/10 hover:bg-white/25 border-white/20 text-white px-2 h-7 min-h-0 gap-1"
+              class="btn btn-sm rounded-sm bg-white/10 hover:bg-white/25 border-white/20 text-white px-2.5 gap-1 font-medium"
               :title="`立即將地圖鏡頭定位至 ${risk.droneACallsign} 與 ${risk.droneBCallsign} 的預估碰撞點`"
               @click="emit('focusCollision', risk.cpaCoordinate)"
             >
-              <MaterialIcon name="my_location" :size="13" />
-              <span class="text-[10px] hidden sm:inline">定位</span>
+              <MaterialIcon name="my_location" :size="15" />
+              <span class="text-xs hidden sm:inline">定位</span>
             </button>
           </div>
         </div>
 
         <!-- Bottom bar: Real-time Recommended Maneuver / Advisory Action -->
-        <div class="flex items-center justify-between gap-2 pt-1 border-t border-white/10 text-xs">
+        <div class="flex items-center justify-between gap-2 pt-1.5 border-t border-white/10 text-xs">
           <div class="flex items-center gap-1.5 opacity-90 truncate">
-            <MaterialIcon name="shield" :size="13" class="text-emerald-400 flex-shrink-0" />
-            <span class="truncate font-medium text-[11px]">{{ risk.advisoryText }}</span>
+            <MaterialIcon name="shield" :size="15" class="text-emerald-400 flex-shrink-0" />
+            <span class="truncate font-medium text-xs">{{ risk.advisoryText }}</span>
           </div>
-          <div class="text-[10px] font-mono opacity-70 flex-shrink-0">
+          <div class="text-xs font-mono opacity-80 flex-shrink-0">
             間距: {{ risk.currentDistanceMeters }}m | 高度差: {{ risk.altitudeDiffMeters }}m
           </div>
         </div>

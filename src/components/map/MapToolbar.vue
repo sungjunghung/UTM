@@ -82,7 +82,7 @@ const layerOptions: { type: BaseLayerType; label: string; icon: string }[] = [
           <MaterialIcon name="layers" :size="18" />
         </div>
         <ul tabindex="0" class="dropdown-content menu p-1.5 shadow-2xl bg-base-200/95 backdrop-blur-md rounded-md w-44 border border-base-300 text-xs space-y-0.5 z-50">
-          <li class="menu-title text-[10px] uppercase tracking-wider text-base-content/60 font-semibold px-2 py-1">
+          <li class="menu-title text-xs uppercase tracking-wider text-base-content/60 font-semibold px-2 py-1">
             底圖圖層 (Layers)
           </li>
           <li v-for="layer in layerOptions" :key="layer.type">
@@ -104,7 +104,7 @@ const layerOptions: { type: BaseLayerType; label: string; icon: string }[] = [
           <MaterialIcon name="explore" :size="18" />
         </div>
         <ul tabindex="0" class="dropdown-content menu p-1.5 shadow-2xl bg-base-200/95 backdrop-blur-md rounded-md w-48 border border-base-300 text-xs space-y-0.5 z-50">
-          <li class="menu-title text-[10px] uppercase tracking-wider text-base-content/60 font-semibold px-2 py-1">
+          <li class="menu-title text-xs uppercase tracking-wider text-base-content/60 font-semibold px-2 py-1">
             常用地點 (Presets)
           </li>
           <li v-for="loc in presets" :key="loc.name">

@@ -63,7 +63,7 @@ const filteredList = computed(() => {
       <div class="text-xs font-semibold flex items-center gap-1.5" title="空域即時在空無人機 (UAV / Drone)">
         <span class="text-base-content/70">空域即時無人機:</span>
         <span class="font-mono font-bold text-cyan-400">{{ droneList.length }}</span>
-        <span class="text-base-content/60 text-[11px]">架</span>
+        <span class="text-base-content/60 text-xs">架</span>
       </div>
 
       <div class="divider divider-horizontal mx-0.5 h-4"></div>
@@ -128,7 +128,7 @@ const filteredList = computed(() => {
         @click="isSimulatingConflict ? emit('resetConflict') : emit('triggerConflict')"
       >
         <MaterialIcon :name="isSimulatingConflict ? 'restart_alt' : 'crisis_alert'" :size="14" />
-        <span class="text-[11px]">{{ isSimulatingConflict ? '還原巡檢' : '模擬碰撞' }}</span>
+        <span class="text-xs">{{ isSimulatingConflict ? '還原巡檢' : '模擬碰撞' }}</span>
       </button>
 
       <!-- Action: Center on Drone Operations Hub (NCHC) -->
@@ -186,18 +186,18 @@ const filteredList = computed(() => {
             <div class="min-w-0">
               <div class="flex items-center gap-1.5">
                 <span class="font-bold text-cyan-300 truncate">{{ d.callsign }}</span>
-                <span class="badge badge-xs bg-cyan-500/20 text-cyan-300 border-none text-[9px] px-1 font-mono">
+                <span class="badge badge-sm bg-cyan-500/20 text-cyan-300 border-none text-xs px-1.5 font-mono">
                   {{ d.remoteId }}
                 </span>
               </div>
-              <div class="text-[10px] text-base-content/70 mt-0.5 truncate">
+              <div class="text-xs text-base-content/70 mt-0.5 truncate">
                 {{ d.missionType }}
               </div>
             </div>
           </div>
-          <div class="text-right font-mono text-[11px] flex-shrink-0 ml-2">
+          <div class="text-right font-mono text-xs flex-shrink-0 ml-2">
             <div class="text-cyan-400 font-bold">{{ d.altitudeAglMeters }}m</div>
-            <div class="text-[10px] text-emerald-400">🔋 {{ d.batteryPercent }}%</div>
+            <div class="text-xs text-emerald-400">🔋 {{ d.batteryPercent }}%</div>
           </div>
         </button>
       </div>
@@ -226,8 +226,8 @@ const filteredList = computed(() => {
         <div class="w-9 h-9 mx-auto rounded-full bg-success/20 text-success flex items-center justify-center">
           <MaterialIcon name="verified_user" :size="18" />
         </div>
-        <div>全空域無碰撞風險（綠燈安全）</div>
-        <div class="text-[11px] text-base-content/40">
+        <div class="font-medium">全空域無碰撞風險（綠燈安全）</div>
+        <div class="text-xs text-base-content/50">
           點擊上方「模擬碰撞」按鈕可立即體驗航向交叉碰撞預警
         </div>
       </div>
@@ -250,7 +250,7 @@ const filteredList = computed(() => {
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-1.5 font-bold">
               <span
-                class="badge badge-xs"
+                class="badge badge-sm"
                 :class="
                   risk.severity === 'critical'
                     ? 'badge-error text-white font-bold'
@@ -264,26 +264,26 @@ const filteredList = computed(() => {
               <span class="truncate">{{ risk.droneACallsign }} ↔ {{ risk.droneBCallsign }}</span>
             </div>
             <button
-              class="btn btn-xs btn-outline btn-ghost text-[10px] px-1.5 h-6 min-h-0"
+              class="btn btn-sm btn-outline btn-ghost text-xs px-2 h-7 min-h-0"
               title="聚焦衝突預測點"
               @click="
                 emit('focusCollision', risk.cpaCoordinate);
                 isAlertsOpen = false;
               "
             >
-              <MaterialIcon name="my_location" :size="12" />
+              <MaterialIcon name="my_location" :size="14" />
               定位
             </button>
           </div>
 
           <!-- Spatial CPA Stats Grid -->
-          <div class="grid grid-cols-3 gap-1.5 bg-base-100/60 p-2 rounded-sm border border-base-content/10 font-mono text-[11px]">
+          <div class="grid grid-cols-3 gap-1.5 bg-base-100/60 p-2 rounded-sm border border-base-content/10 font-mono text-xs">
             <div>
-              <div class="text-[9px] text-base-content/60">目前距離</div>
+              <div class="text-xs text-base-content/60">目前距離</div>
               <div class="font-bold text-cyan-400">{{ risk.currentDistanceMeters }} m</div>
             </div>
             <div>
-              <div class="text-[9px] text-base-content/60">預估 CPA 距離</div>
+              <div class="text-xs text-base-content/60">預估 CPA 距離</div>
               <div
                 class="font-bold"
                 :class="risk.cpaDistanceMeters < 30 ? 'text-error font-extrabold' : 'text-warning'"
@@ -292,13 +292,13 @@ const filteredList = computed(() => {
               </div>
             </div>
             <div>
-              <div class="text-[9px] text-base-content/60">發生時間</div>
+              <div class="text-xs text-base-content/60">發生時間</div>
               <div class="font-bold text-amber-300">{{ risk.timeToCpaSeconds }} 秒後</div>
             </div>
           </div>
 
           <!-- Suggested Advisory Action -->
-          <div class="text-[11px] leading-relaxed text-base-content/90 font-sans">
+          <div class="text-xs leading-relaxed text-base-content/90 font-sans">
             {{ risk.advisoryText }}
           </div>
         </div>

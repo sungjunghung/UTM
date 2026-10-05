@@ -119,9 +119,9 @@ const pitchOffset = computed(() => {
     </div>
 
     <!-- HUD Real-time Pitch & Roll Values (Bottom & Corner readout) -->
-    <div class="absolute bottom-1 left-0 right-0 flex items-center justify-between px-2 text-[9px] font-mono font-bold text-white/90 z-30 drop-shadow">
-      <span class="bg-black/60 px-1 py-0.5 rounded">P: {{ pitchDeg > 0 ? '+' : '' }}{{ pitchDeg.toFixed(1) }}°</span>
-      <span class="bg-black/60 px-1 py-0.5 rounded">R: {{ rollDeg > 0 ? '+' : '' }}{{ rollDeg.toFixed(1) }}°</span>
+    <div class="absolute bottom-1 left-0 right-0 flex items-center justify-between px-2 text-xs font-mono font-bold text-white/90 z-30 drop-shadow">
+      <span class="bg-black/60 px-1.5 py-0.5 rounded">P: {{ pitchDeg > 0 ? '+' : '' }}{{ pitchDeg.toFixed(1) }}°</span>
+      <span class="bg-black/60 px-1.5 py-0.5 rounded">R: {{ rollDeg > 0 ? '+' : '' }}{{ rollDeg.toFixed(1) }}°</span>
     </div>
   </div>
 </template>

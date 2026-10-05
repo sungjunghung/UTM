@@ -77,7 +77,7 @@ function resetAllFilters() {
         <MaterialIcon name="gpp_bad" :size="16" class="text-rose-400" />
         <span class="tracking-wide">民航局禁限航區</span>
         <span
-          class="badge badge-xs rounded-sm font-mono text-[9px] border"
+          class="badge badge-sm rounded-sm font-mono text-xs border"
           :class="showAirspace ? 'badge-error text-white border-rose-400/50' : 'badge-ghost opacity-60'"
         >
           {{ showAirspace ? '開啟' : '關閉' }}
@@ -85,8 +85,8 @@ function resetAllFilters() {
       </button>
 
       <!-- Loading Spinner Indicator when fetching tiles -->
-      <div v-if="isLoading" class="flex items-center gap-1 px-1 text-[10px] text-amber-400 animate-pulse">
-        <MaterialIcon name="sync" :size="12" class="animate-spin" />
+      <div v-if="isLoading" class="flex items-center gap-1 px-1 text-xs text-amber-400 animate-pulse">
+        <MaterialIcon name="sync" :size="13" class="animate-spin" />
         <span class="hidden sm:inline font-mono">載入中</span>
       </div>
 
@@ -100,31 +100,31 @@ function resetAllFilters() {
           title="空域圖層篩選與名稱顯示控制"
           @click="isSettingsOpen = !isSettingsOpen"
         >
-          <MaterialIcon name="tune" :size="14" />
+          <MaterialIcon name="tune" :size="15" />
         </button>
 
         <!-- Airspace Settings & Filter Dropdown Panel -->
         <div
           v-if="isSettingsOpen"
-          class="absolute left-0 sm:left-auto sm:right-0 top-full mt-2 w-80 rounded-md shadow-2xl bg-base-200/98 backdrop-blur-xl border border-base-300 p-3 z-50 text-xs text-base-content space-y-2.5"
+          class="absolute left-0 sm:left-auto sm:right-0 top-full mt-2 w-84 rounded-md shadow-2xl bg-base-200/98 backdrop-blur-xl border border-base-300 p-3.5 z-50 text-xs text-base-content space-y-3"
         >
           <!-- Header with Tab Switcher -->
           <div class="flex items-center justify-between border-b border-base-content/10 pb-2">
-            <div class="flex items-center gap-1">
+            <div class="flex items-center gap-1.5">
               <button
-                class="btn btn-xs rounded-sm px-2 font-medium"
+                class="btn btn-xs rounded-sm px-2.5 font-semibold text-xs"
                 :class="activeTab === 'filters' ? 'btn-primary' : 'btn-ghost text-base-content/70'"
                 @click="activeTab = 'filters'"
               >
-                <MaterialIcon name="tune" :size="13" />
+                <MaterialIcon name="tune" :size="14" />
                 <span>顯示過濾</span>
               </button>
               <button
-                class="btn btn-xs rounded-sm px-2 font-medium"
+                class="btn btn-xs rounded-sm px-2.5 font-semibold text-xs"
                 :class="activeTab === 'legend' ? 'btn-primary' : 'btn-ghost text-base-content/70'"
                 @click="activeTab = 'legend'"
               >
-                <MaterialIcon name="info" :size="13" />
+                <MaterialIcon name="info" :size="14" />
                 <span>法規圖例</span>
               </button>
             </div>
@@ -133,66 +133,66 @@ function resetAllFilters() {
               class="btn btn-ghost btn-xs btn-square rounded-sm"
               @click="isSettingsOpen = false"
             >
-              <MaterialIcon name="close" :size="14" />
+              <MaterialIcon name="close" :size="15" />
             </button>
           </div>
 
           <!-- TAB 1: Filter & Name Display Controls -->
           <div v-if="activeTab === 'filters'" class="space-y-3">
             <!-- 1. Airspace Name / Label Display Control -->
-            <div class="p-2 rounded-sm bg-base-100/70 border border-base-content/10 space-y-1.5">
+            <div class="p-2.5 rounded-sm bg-base-100 border border-base-content/10 space-y-1.5">
               <div class="flex items-center justify-between">
-                <div class="flex items-center gap-1.5 font-bold text-xs">
-                  <MaterialIcon name="subtitles" :size="15" class="text-cyan-400" />
+                <div class="flex items-center gap-2 font-bold text-xs text-base-content">
+                  <MaterialIcon name="subtitles" :size="16" class="text-cyan-400" />
                   <span>空域名稱標籤顯示</span>
                 </div>
                 <input
                   type="checkbox"
-                  class="toggle toggle-xs toggle-primary"
+                  class="toggle toggle-sm toggle-primary"
                   :checked="filterOptions.showLabels"
                   @change="toggleLabels"
                 />
               </div>
-              <p class="text-[10px] text-base-content/60 leading-tight">
-                {{ filterOptions.showLabels ? '地圖將在地圖放大時顯示空域名稱與管制標籤' : '已關閉地圖名稱文字，僅保留邊界多邊形' }}
+              <p class="text-xs text-base-content/70 leading-relaxed">
+                {{ filterOptions.showLabels ? '地圖多邊形將標註空域法定名稱與管制類別' : '已關閉地圖名稱文字，僅保留邊界幾何多邊形' }}
               </p>
             </div>
 
             <!-- 2. Zone Types Filter (Red / Yellow) -->
-            <div class="space-y-1.5">
-              <div class="text-[10px] uppercase font-bold text-base-content/50 tracking-wider">
+            <div class="space-y-2">
+              <div class="text-xs uppercase font-bold text-base-content/60 tracking-wider">
                 空域管制級別
               </div>
 
               <!-- Red Zone Toggle -->
-              <label class="flex items-center justify-between p-2 rounded-sm bg-rose-950/20 border border-rose-500/30 cursor-pointer hover:bg-rose-950/30 transition-colors">
-                <div class="flex items-center gap-2">
-                  <span class="w-2.5 h-2.5 rounded-xs bg-rose-500 border border-rose-400 shrink-0"></span>
+              <label class="flex items-center justify-between p-2.5 rounded-sm bg-rose-950/20 border border-rose-500/30 cursor-pointer hover:bg-rose-950/30 transition-colors">
+                <div class="flex items-center gap-2.5">
+                  <span class="w-3 h-3 rounded-xs bg-rose-500 border border-rose-400 shrink-0"></span>
                   <div class="leading-tight">
                     <span class="font-bold text-rose-400 text-xs">🔴 禁航區（紅區）</span>
-                    <div class="text-[10px] text-base-content/60">全日嚴禁任何無人機活動</div>
+                    <div class="text-xs text-base-content/60 mt-0.5">全日嚴禁任何無人機活動</div>
                   </div>
                 </div>
                 <input
                   type="checkbox"
-                  class="checkbox checkbox-xs checkbox-error rounded-sm"
+                  class="checkbox checkbox-sm checkbox-error rounded-sm"
                   :checked="filterOptions.showRedZones"
                   @change="toggleRed"
                 />
               </label>
 
               <!-- Yellow Zone Toggle -->
-              <label class="flex items-center justify-between p-2 rounded-sm bg-amber-950/20 border border-amber-500/30 cursor-pointer hover:bg-amber-950/30 transition-colors">
-                <div class="flex items-center gap-2">
-                  <span class="w-2.5 h-2.5 rounded-xs bg-amber-500/30 border border-amber-500 border-dashed shrink-0"></span>
+              <label class="flex items-center justify-between p-2.5 rounded-sm bg-amber-950/20 border border-amber-500/30 cursor-pointer hover:bg-amber-950/30 transition-colors">
+                <div class="flex items-center gap-2.5">
+                  <span class="w-3 h-3 rounded-xs bg-amber-500/30 border border-amber-500 border-dashed shrink-0"></span>
                   <div class="leading-tight">
                     <span class="font-bold text-amber-400 text-xs">🟠 限航區（黃區）</span>
-                    <div class="text-[10px] text-base-content/60">限高 200 呎 / 依規定申請</div>
+                    <div class="text-xs text-base-content/60 mt-0.5">限高 200 呎 / 依規定申請</div>
                   </div>
                 </div>
                 <input
                   type="checkbox"
-                  class="checkbox checkbox-xs checkbox-warning rounded-sm"
+                  class="checkbox checkbox-sm checkbox-warning rounded-sm"
                   :checked="filterOptions.showYellowZones"
                   @change="toggleYellow"
                 />
@@ -200,48 +200,48 @@ function resetAllFilters() {
             </div>
 
             <!-- 3. Sub-Category Filter -->
-            <div class="space-y-1.5 pt-1 border-t border-base-content/10">
-              <div class="text-[10px] uppercase font-bold text-base-content/50 tracking-wider">
+            <div class="space-y-2 pt-2 border-t border-base-content/10">
+              <div class="text-xs uppercase font-bold text-base-content/60 tracking-wider">
                 空域細項類別
               </div>
 
               <!-- Airport & Corridor -->
-              <label class="flex items-center justify-between px-2 py-1.5 rounded-sm bg-base-100/50 border border-base-content/10 cursor-pointer hover:bg-base-100">
-                <div class="flex items-center gap-1.5 text-[11px]">
-                  <MaterialIcon name="flight_takeoff" :size="13" class="text-sky-400" />
+              <label class="flex items-center justify-between px-2.5 py-2 rounded-sm bg-base-100 border border-base-content/10 cursor-pointer hover:bg-base-300/40">
+                <div class="flex items-center gap-2 text-xs">
+                  <MaterialIcon name="flight_takeoff" :size="15" class="text-sky-400" />
                   <span>機場與航道四周管制範圍</span>
                 </div>
                 <input
                   type="checkbox"
-                  class="checkbox checkbox-xs rounded-sm"
+                  class="checkbox checkbox-sm rounded-sm"
                   :checked="filterOptions.categories.airport"
                   @change="toggleCategory('airport')"
                 />
               </label>
 
               <!-- Municipal & Critical Infrastructure -->
-              <label class="flex items-center justify-between px-2 py-1.5 rounded-sm bg-base-100/50 border border-base-content/10 cursor-pointer hover:bg-base-100">
-                <div class="flex items-center gap-1.5 text-[11px]">
-                  <MaterialIcon name="account_balance" :size="13" class="text-amber-400" />
+              <label class="flex items-center justify-between px-2.5 py-2 rounded-sm bg-base-100 border border-base-content/10 cursor-pointer hover:bg-base-300/40">
+                <div class="flex items-center gap-2 text-xs">
+                  <MaterialIcon name="account_balance" :size="15" class="text-amber-400" />
                   <span>縣市機關與高鐵/電網設施</span>
                 </div>
                 <input
                   type="checkbox"
-                  class="checkbox checkbox-xs rounded-sm"
+                  class="checkbox checkbox-sm rounded-sm"
                   :checked="filterOptions.categories.government"
                   @change="toggleCategory('government')"
                 />
               </label>
 
               <!-- FIR Flight Information Region -->
-              <label class="flex items-center justify-between px-2 py-1.5 rounded-sm bg-base-100/50 border border-base-content/10 cursor-pointer hover:bg-base-100">
-                <div class="flex items-center gap-1.5 text-[11px]">
-                  <MaterialIcon name="public" :size="13" class="text-emerald-400" />
+              <label class="flex items-center justify-between px-2.5 py-2 rounded-sm bg-base-100 border border-base-content/10 cursor-pointer hover:bg-base-300/40">
+                <div class="flex items-center gap-2 text-xs">
+                  <MaterialIcon name="public" :size="15" class="text-emerald-400" />
                   <span>飛航情報限航區範圍</span>
                 </div>
                 <input
                   type="checkbox"
-                  class="checkbox checkbox-xs rounded-sm"
+                  class="checkbox checkbox-sm rounded-sm"
                   :checked="filterOptions.categories.fir"
                   @change="toggleCategory('fir')"
                 />
@@ -251,41 +251,41 @@ function resetAllFilters() {
             <!-- Quick Action: Reset to Defaults -->
             <div class="pt-1 flex justify-end">
               <button
-                class="btn btn-xs btn-ghost text-[10px] text-base-content/60 hover:text-base-content gap-1"
+                class="btn btn-xs btn-ghost text-xs text-base-content/70 hover:text-base-content gap-1"
                 @click="resetAllFilters"
               >
-                <MaterialIcon name="restart_alt" :size="12" />
+                <MaterialIcon name="restart_alt" :size="14" />
                 <span>重設所有篩選</span>
               </button>
             </div>
           </div>
 
           <!-- TAB 2: Legal Rules & Legend -->
-          <div v-else-if="activeTab === 'legend'" class="space-y-2.5">
+          <div v-else-if="activeTab === 'legend'" class="space-y-3">
             <!-- Red Zone Description -->
-            <div class="flex items-start gap-2 p-2 rounded-sm bg-rose-950/20 border border-rose-500/30">
-              <span class="w-3 h-3 rounded-xs bg-rose-500/40 border border-rose-500 shrink-0 mt-0.5"></span>
+            <div class="flex items-start gap-2.5 p-2.5 rounded-sm bg-rose-950/20 border border-rose-500/30">
+              <span class="w-3.5 h-3.5 rounded-xs bg-rose-500/40 border border-rose-500 shrink-0 mt-0.5"></span>
               <div>
-                <div class="font-bold text-rose-400 text-[11px]">🔴 紅區（禁航區）</div>
-                <p class="text-[10px] text-base-content/70 leading-relaxed mt-0.5">
+                <div class="font-bold text-rose-400 text-xs">🔴 紅區（禁航區）</div>
+                <p class="text-xs text-base-content/80 leading-relaxed mt-1">
                   全日禁止遙控無人機飛航活動。涵蓋機場四周、軍事管制區、高鐵/台鐵沿線及中央政府機關。
                 </p>
               </div>
             </div>
 
             <!-- Yellow Zone Description -->
-            <div class="flex items-start gap-2 p-2 rounded-sm bg-amber-950/20 border border-amber-500/30">
-              <span class="w-3 h-3 rounded-xs bg-amber-500/30 border border-amber-500 border-dashed shrink-0 mt-0.5"></span>
+            <div class="flex items-start gap-2.5 p-2.5 rounded-sm bg-amber-950/20 border border-amber-500/30">
+              <span class="w-3.5 h-3.5 rounded-xs bg-amber-500/30 border border-amber-500 border-dashed shrink-0 mt-0.5"></span>
               <div>
-                <div class="font-bold text-amber-400 text-[11px]">🟠 黃區（限航區）</div>
-                <p class="text-[10px] text-base-content/70 leading-relaxed mt-0.5">
+                <div class="font-bold text-amber-400 text-xs">🟠 黃區（限航區）</div>
+                <p class="text-xs text-base-content/80 leading-relaxed mt-1">
                   限制遙控無人機飛航活動。限制飛行高度 200 呎（約 60 公尺）以下，或須依民航法事前申請核准。
                 </p>
               </div>
             </div>
 
             <!-- Metadata & Rules -->
-            <div class="text-[9px] font-mono text-base-content/50 pt-1 border-t border-base-content/10 space-y-0.5">
+            <div class="text-xs font-mono text-base-content/60 pt-2 border-t border-base-content/10 space-y-1">
               <div>資料來源: 交通部民用航空局 (UAV_fs_ryg)</div>
               <div>法規依據: 民用航空法第 99 條之 13 及第 118 條之 2</div>
               <div>更新頻率: 依視野動態查詢 + 官方即時同步</div>

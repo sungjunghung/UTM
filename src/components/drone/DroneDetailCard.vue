@@ -74,18 +74,18 @@ const batteryBg = computed(() => {
               <h3 class="font-extrabold text-base tracking-wider leading-none truncate text-cyan-200">
                 {{ drone.callsign }}
               </h3>
-              <span class="badge badge-xs rounded-sm bg-cyan-500/30 text-cyan-200 border border-cyan-400/40 font-mono text-[9px] shrink-0">
+              <span class="badge badge-sm rounded-sm bg-cyan-500/30 text-cyan-200 border border-cyan-400/40 font-mono text-xs shrink-0">
                 {{ drone.remoteId }}
               </span>
             </div>
-            <p class="text-[11px] text-slate-300 mt-0.5 truncate">
+            <p class="text-xs text-slate-300 mt-0.5 truncate">
               {{ drone.model }} · <span class="text-cyan-300/80">{{ drone.operator }}</span>
             </p>
           </div>
         </div>
 
         <button
-          class="btn btn-xs btn-square rounded-sm btn-ghost text-white/80 hover:text-white hover:bg-white/20 z-10 shrink-0 ml-1"
+          class="btn btn-sm btn-square rounded-sm btn-ghost text-white/80 hover:text-white hover:bg-white/20 z-10 shrink-0 ml-1"
           title="關閉"
           @click="emit('close')"
         >
@@ -97,19 +97,19 @@ const batteryBg = computed(() => {
       <div class="px-3.5 py-2 bg-slate-800/80 border-b border-slate-700/60 flex items-center justify-between text-xs">
         <div class="flex items-center gap-1.5 truncate">
           <MaterialIcon name="assignment" :size="15" class="text-cyan-400 shrink-0" />
-          <span class="text-slate-300 text-[11px] truncate">{{ drone.missionType }}</span>
+          <span class="text-slate-300 text-xs truncate">{{ drone.missionType }}</span>
         </div>
         <div class="flex items-center gap-2">
           <button
-            class="btn btn-xs rounded-sm px-2 h-6 min-h-0 font-medium transition-all"
-            :class="showAttitude ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40' : 'btn-ghost text-slate-400 text-[10px]'"
+            class="btn btn-sm rounded-sm px-2.5 h-7 min-h-0 font-medium text-xs transition-all"
+            :class="showAttitude ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40' : 'btn-ghost text-slate-400'"
             title="開關姿態水平儀"
             @click="showAttitude = !showAttitude"
           >
-            <MaterialIcon name="explore" :size="13" />
+            <MaterialIcon name="explore" :size="14" />
             <span>姿態儀</span>
           </button>
-          <div class="badge badge-xs rounded-sm px-2 py-1 font-semibold shrink-0" :class="drone.status === '定點懸停' ? 'badge-warning' : 'badge-accent'">
+          <div class="badge badge-sm rounded-sm px-2 py-0.5 font-semibold shrink-0" :class="drone.status === '定點懸停' ? 'badge-warning' : 'badge-accent'">
             {{ drone.status }}
           </div>
         </div>
@@ -129,29 +129,29 @@ const batteryBg = computed(() => {
 
         <!-- Attitude Telemetry Pitch / Roll / Vertical Rate Data Readout -->
         <div class="flex flex-col gap-1.5 text-xs font-mono min-w-0 flex-1">
-          <div class="flex items-center justify-between px-2 py-1 rounded-sm bg-slate-800/80 border border-slate-700/70">
-            <span class="text-slate-400 text-[10px]">俯仰 (Pitch)</span>
+          <div class="flex items-center justify-between px-2.5 py-1.5 rounded-sm bg-slate-800/80 border border-slate-700/70">
+            <span class="text-slate-400 text-xs">俯仰 (Pitch)</span>
             <span
-              class="font-bold"
+              class="font-bold text-sm"
               :class="(drone.pitchDeg || 0) < -15 ? 'text-amber-400' : 'text-cyan-300'"
             >
               {{ (drone.pitchDeg || 0) > 0 ? '+' : '' }}{{ (drone.pitchDeg || 0).toFixed(1) }}°
             </span>
           </div>
 
-          <div class="flex items-center justify-between px-2 py-1 rounded-sm bg-slate-800/80 border border-slate-700/70">
-            <span class="text-slate-400 text-[10px]">橫滾 (Roll)</span>
+          <div class="flex items-center justify-between px-2.5 py-1.5 rounded-sm bg-slate-800/80 border border-slate-700/70">
+            <span class="text-slate-400 text-xs">橫滾 (Roll)</span>
             <span
-              class="font-bold"
+              class="font-bold text-sm"
               :class="Math.abs(drone.rollDeg || 0) > 20 ? 'text-amber-400' : 'text-cyan-300'"
             >
               {{ (drone.rollDeg || 0) > 0 ? '+' : '' }}{{ (drone.rollDeg || 0).toFixed(1) }}°
             </span>
           </div>
 
-          <div class="flex items-center justify-between px-2 py-1 rounded-sm bg-slate-800/80 border border-slate-700/70">
-            <span class="text-slate-400 text-[10px]">爬升率 (V/S)</span>
-            <span class="font-bold text-slate-200">
+          <div class="flex items-center justify-between px-2.5 py-1.5 rounded-sm bg-slate-800/80 border border-slate-700/70">
+            <span class="text-slate-400 text-xs">爬升率 (V/S)</span>
+            <span class="font-bold text-sm text-slate-200">
               {{ (drone.verticalRateMps || 0) > 0 ? '+' : '' }}{{ (drone.verticalRateMps || 0).toFixed(1) }} m/s
             </span>
           </div>
@@ -163,42 +163,42 @@ const batteryBg = computed(() => {
         <div class="grid grid-cols-2 gap-2">
           <!-- Altitude AGL (Against 120m Legal Limit) -->
           <div class="p-2 rounded-sm bg-slate-800/80 border border-slate-700/70">
-            <div class="text-slate-400 flex items-center justify-between text-[11px] mb-0.5">
+            <div class="text-slate-400 flex items-center justify-between text-xs mb-1">
               <div class="flex items-center gap-1">
                 <MaterialIcon name="height" :size="14" class="text-cyan-400" />
                 <span>對地高度 (AGL)</span>
               </div>
               <span
-                class="badge badge-xs rounded-sm text-[9px] font-bold border-none"
+                class="badge badge-sm rounded-sm text-xs font-bold border-none"
                 :class="isAltitudeLegal ? 'bg-emerald-500/20 text-emerald-300' : 'bg-amber-500/20 text-amber-300'"
               >
                 {{ isAltitudeLegal ? '≤120m 合規' : '超高警戒' }}
               </span>
             </div>
-            <div class="font-bold text-sm font-mono text-slate-100">
-              {{ drone.altitudeAglMeters }} <span class="text-[10px] font-normal text-slate-400">m</span>
-              <span class="text-[10px] text-slate-400 ml-1">({{ drone.altitudeAglFeet }} ft)</span>
+            <div class="font-bold text-base font-mono text-slate-100">
+              {{ drone.altitudeAglMeters }} <span class="text-xs font-normal text-slate-400">m</span>
+              <span class="text-xs text-slate-400 ml-1">({{ drone.altitudeAglFeet }} ft)</span>
             </div>
           </div>
 
           <!-- Speed -->
           <div class="p-2 rounded-sm bg-slate-800/80 border border-slate-700/70">
-            <div class="text-slate-400 flex items-center gap-1 text-[11px] mb-0.5">
+            <div class="text-slate-400 flex items-center gap-1 text-xs mb-1">
               <MaterialIcon name="speed" :size="14" class="text-amber-400" />
               <span>飛行速度</span>
             </div>
-            <div class="font-bold text-sm font-mono text-slate-100">
-              {{ drone.speedKmh }} <span class="text-[10px] font-normal text-slate-400">km/h</span>
+            <div class="font-bold text-base font-mono text-slate-100">
+              {{ drone.speedKmh }} <span class="text-xs font-normal text-slate-400">km/h</span>
             </div>
           </div>
 
           <!-- Heading -->
           <div class="p-2 rounded-sm bg-slate-800/80 border border-slate-700/70">
-            <div class="text-slate-400 flex items-center gap-1 text-[11px] mb-0.5">
+            <div class="text-slate-400 flex items-center gap-1 text-xs mb-1">
               <MaterialIcon name="navigation" :size="14" class="text-sky-400" />
               <span>航向</span>
             </div>
-            <div class="font-bold text-xs font-mono flex items-center gap-1 text-slate-100">
+            <div class="font-bold text-base font-mono flex items-center gap-1 text-slate-100">
               <span>{{ drone.heading }}°</span>
               <span
                 class="inline-block transform transition-transform text-cyan-400 font-bold"
@@ -211,12 +211,12 @@ const batteryBg = computed(() => {
 
           <!-- Battery Level with progress bar -->
           <div class="p-2 rounded-sm bg-slate-800/80 border border-slate-700/70">
-            <div class="text-slate-400 flex items-center justify-between text-[11px] mb-0.5">
+            <div class="text-slate-400 flex items-center justify-between text-xs mb-1">
               <div class="flex items-center gap-1">
                 <MaterialIcon name="battery_charging_full" :size="14" :class="batteryColor" />
                 <span>剩餘電量</span>
               </div>
-              <span class="font-mono font-bold" :class="batteryColor">{{ drone.batteryPercent }}%</span>
+              <span class="font-mono font-bold text-sm" :class="batteryColor">{{ drone.batteryPercent }}%</span>
             </div>
             <div class="w-full bg-slate-700 h-1.5 rounded-sm overflow-hidden mt-1.5">
               <div
@@ -229,7 +229,7 @@ const batteryBg = computed(() => {
         </div>
 
         <!-- Coordinates, Comm Link & GNSS Satellites -->
-        <div class="flex items-center justify-between px-2.5 py-1.5 rounded-sm bg-slate-800/60 text-[10px] font-mono text-slate-300 border border-slate-700/60">
+        <div class="flex items-center justify-between px-2.5 py-1.5 rounded-sm bg-slate-800/60 text-xs font-mono text-slate-300 border border-slate-700/60">
           <div>
             <span>{{ drone.latitude.toFixed(4) }}°N</span>
             <span class="ml-1.5">{{ drone.longitude.toFixed(4) }}°E</span>
@@ -250,11 +250,11 @@ const batteryBg = computed(() => {
         <!-- Action: Follow Camera Toggle -->
         <div>
           <button
-            class="btn btn-xs rounded-sm w-full gap-1.5 font-medium transition-all"
+            class="btn btn-sm rounded-sm w-full gap-1.5 font-medium text-xs transition-all"
             :class="isFollowing ? 'btn-accent shadow-md shadow-accent/30' : 'bg-slate-800 hover:bg-slate-700 border-slate-600 text-slate-200'"
             @click="emit('toggleFollow')"
           >
-            <MaterialIcon :name="isFollowing ? 'videocam' : 'videocam_off'" :size="15" />
+            <MaterialIcon :name="isFollowing ? 'videocam' : 'videocam_off'" :size="16" />
             <span>{{ isFollowing ? '無人機視角鎖定中（點擊解除）' : '鎖定鏡頭跟隨無人機' }}</span>
           </button>
         </div>
