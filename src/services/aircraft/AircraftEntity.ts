@@ -112,18 +112,29 @@ export class AircraftEntity {
   }
 
   /**
-   * Linear interpolation step (0.0 <= progress <= 1.0) for smooth gliding
+   * Smooth interpolation step with dead reckoning projection
    */
-  public stepInterpolation(progress: number): void {
-    const clamped = Math.min(Math.max(progress, 0), 1)
-    const lon = this.startLonLat[0] + (this.targetLonLat[0] - this.startLonLat[0]) * clamped
-    const lat = this.startLonLat[1] + (this.targetLonLat[1] - this.startLonLat[1]) * clamped
-    this.currentLonLat = [lon, lat]
+  public stepInterpolation(progress: number, pollIntervalSec: number = 8): void {
+    if (progress <= 1.0) {
+      const clamped = Math.max(progress, 0)
+      const lon = this.startLonLat[0] + (this.targetLonLat[0] - this.startLonLat[0]) * clamped
+      const lat = this.startLonLat[1] + (this.targetLonLat[1] - this.startLonLat[1]) * clamped
+      this.currentLonLat = [lon, lat]
+    } else if (this.speed > 30 && !this.isGround) {
+      // Dead-reckoning: project forward using speed (knots) and heading
+      const overdueSec = Math.min((progress - 1.0) * pollIntervalSec, 30) // max 30s projection
+      const distMeters = this.speed * 0.514444 * overdueSec
+      const rad = (this.heading * Math.PI) / 180
+      const dLat = (distMeters * Math.cos(rad)) / 111320
+      const latRad = (this.targetLonLat[1] * Math.PI) / 180
+      const dLon = (distMeters * Math.sin(rad)) / (111320 * Math.max(Math.cos(latRad), 0.1))
+      this.currentLonLat = [this.targetLonLat[0] + dLon, this.targetLonLat[1] + dLat]
+    }
 
     // Update geometry point
     const geom = this.planeFeature.getGeometry()
     if (geom) {
-      geom.setCoordinates(fromLonLat([lon, lat]))
+      geom.setCoordinates(fromLonLat(this.currentLonLat))
     }
   }
 

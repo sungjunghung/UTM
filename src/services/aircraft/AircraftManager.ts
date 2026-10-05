@@ -87,8 +87,19 @@ export class AircraftManager {
       }
     })
 
+    // Page visibility listener: stop polling when tab is hidden
+    document.addEventListener('visibilitychange', this.handleVisibilityChange)
+
     // Start background polling & 60fps interpolation loop
     this.start()
+  }
+
+  private handleVisibilityChange = (): void => {
+    if (document.hidden) {
+      this.stop()
+    } else {
+      this.start()
+    }
   }
 
   public start(): void {
@@ -198,10 +209,11 @@ export class AircraftManager {
     const loop = () => {
       if (!this.isPolling) return
       const elapsed = Date.now() - this.animationStartTime
-      const progress = Math.min(elapsed / this.pollIntervalMs, 1.0)
+      const progress = elapsed / this.pollIntervalMs
+      const pollSec = this.pollIntervalMs / 1000
 
       this.aircraftMap.forEach((entity) => {
-        entity.stepInterpolation(progress)
+        entity.stepInterpolation(progress, pollSec)
       })
 
       // Auto-follow selected flight if enabled
@@ -315,6 +327,7 @@ export class AircraftManager {
   }
 
   public destroy(): void {
+    document.removeEventListener('visibilitychange', this.handleVisibilityChange)
     this.stop()
     this.updateCallbacks.clear()
     this.selectCallbacks.clear()
