@@ -511,14 +511,6 @@ function showToast(msg: string) {
       />
     </div>
 
-    <!-- Floating Top-Right Map Controls Toolbar -->
-    <aside class="absolute top-20 right-4 z-20">
-      <MapToolbar
-        @zoom-in="handleZoomIn"
-        @zoom-out="handleZoomOut"
-        @reset-view="handleResetView"
-      />
-    </aside>
 
     <!-- OpenLayers Map Overlay: Aircraft Detail HUD directly tethered to the plane -->
     <div ref="detailOverlayTarget" class="pointer-events-auto select-none">
@@ -551,12 +543,17 @@ function showToast(msg: string) {
       />
     </div>
 
-    <!-- Floating Bottom Status Bar (Coordinates & UTM Zone) -->
-    <div class="absolute bottom-4 left-4 z-20 hidden md:block">
+    <!-- Floating Bottom Bar: Coordinates/UTM Status Bar and Navigation Controls Centered Together with a gap -->
+    <div class="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 hidden md:flex items-center gap-2.5 pointer-events-auto select-none">
       <MapStatusOverlay
         :mouse-coord="mouseCoord"
         :center-coord="centerCoord"
         :zoom="currentZoom"
+      />
+      <MapToolbar
+        @zoom-in="handleZoomIn"
+        @zoom-out="handleZoomOut"
+        @reset-view="handleResetView"
       />
     </div>
 

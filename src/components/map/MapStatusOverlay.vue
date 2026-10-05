@@ -19,7 +19,7 @@ const utmZone = computed(() => {
 </script>
 
 <template>
-  <div class="inline-flex items-center gap-3.5 px-3.5 py-2 rounded-md bg-base-100/90 backdrop-blur-md border border-base-300 shadow-xl text-sm font-mono text-base-content/90 select-none">
+  <div class="inline-flex items-center gap-3.5 px-3.5 h-9 rounded-md bg-base-100/90 backdrop-blur-md border border-base-300 shadow-xl text-sm font-mono text-base-content/90 select-none">
     <!-- Coordinates -->
     <div class="flex items-center gap-2">
       <MaterialIcon name="explore" :size="18" class="text-primary" />
