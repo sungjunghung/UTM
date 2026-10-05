@@ -1,21 +1,11 @@
 <script setup lang="ts">
-import { computed } from 'vue'
 import MaterialIcon from '../MaterialIcon.vue'
 
-const props = defineProps<{
+defineProps<{
   mouseCoord: [number, number] | null
   centerCoord: [number, number]
   zoom: number
 }>()
-
-// Calculate UTM Zone from Longitude
-const utmZone = computed(() => {
-  const lon = props.mouseCoord ? props.mouseCoord[0] : props.centerCoord[0]
-  const zone = Math.floor((lon + 180) / 6) + 1
-  const lat = props.mouseCoord ? props.mouseCoord[1] : props.centerCoord[1]
-  const hemisphere = lat >= 0 ? 'N' : 'S'
-  return `${zone}${hemisphere}`
-})
 </script>
 
 <template>
@@ -33,14 +23,6 @@ const utmZone = computed(() => {
     </div>
 
     <div class="w-px h-3.5 bg-base-content/20"></div>
-
-    <!-- UTM Zone -->
-    <div class="hidden sm:flex items-center gap-1.5">
-      <span class="badge badge-sm rounded-sm badge-primary font-bold">UTM</span>
-      <span>Zone {{ utmZone }}</span>
-    </div>
-
-    <div class="w-px h-3 bg-base-content/20 hidden sm:block"></div>
 
     <!-- Zoom -->
     <div class="flex items-center gap-1">
