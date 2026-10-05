@@ -54,7 +54,7 @@ onMounted(() => {
       centerLat: 24.7887,
       centerLon: 121.0028,
       radiusNm: 120,
-      pollIntervalMs: 6000,
+      pollIntervalMs: 5000,
       showTrails: showTrails.value,
     })
 
