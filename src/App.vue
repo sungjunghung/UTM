@@ -64,11 +64,11 @@ onMounted(() => {
     <!-- Floating Minimal Top Navigation Bar -->
     <header class="absolute top-4 left-4 right-4 z-30 pointer-events-none">
       <div class="flex items-center justify-between">
-        <!-- Brand Title: Glass effect UTM text only, no background -->
-        <div class="pointer-events-auto select-none pl-1 py-1">
-          <span class="text-2xl sm:text-3xl font-black tracking-[0.22em] text-base-content/90 drop-shadow-[0_2px_10px_rgba(0,0,0,0.35)]">
-            UTM
-          </span>
+        <!-- Brand Title: Genuine Glassmorphism UTM -->
+        <div class="pointer-events-auto">
+          <div class="glass-brand cursor-default" title="Universal Transverse Mercator">
+            <span class="glass-brand-text">UTM</span>
+          </div>
         </div>
 
         <!-- Theme Picker & Action Icons -->
