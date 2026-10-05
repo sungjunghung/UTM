@@ -40,6 +40,11 @@ body,
   right: 16px !important;
 }
 
+/* OpenStreetMap Client-side Dark Radar Mode (100% Open Source & Zero API Key) */
+.ol-dark-tiles {
+  filter: invert(100%) hue-rotate(180deg) brightness(85%) contrast(110%) saturate(30%);
+}
+
 /* Borderless Crystal Glass Typography (High Clarity & Opacity) */
 .glass-brand-text {
   font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;

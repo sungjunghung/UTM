@@ -54,6 +54,27 @@ export class LayerManager {
       properties: { title: 'OpenTopoMap', type: 'opentopo' },
     })
     this.baseLayers.set('opentopo', topoLayer)
+
+    // 5. 臺灣通用電子地圖 - 灰階版 (內政部國土測繪中心 NLSC 政府公開開放資料, 100% 免 API Key)
+    const nlscGrayLayer = new TileLayer({
+      source: new XYZ({
+        url: 'https://wmts.nlsc.gov.tw/wmts/EMAP01/default/GoogleMapsCompatible/{z}/{y}/{x}',
+        attributions: '&copy; 內政部國土測繪中心 (NLSC Open Data)',
+        maxZoom: 19,
+      }),
+      visible: this.currentType === 'nlsc-gray',
+      properties: { title: 'NLSC 國土測繪灰階', type: 'nlsc-gray' },
+    })
+    this.baseLayers.set('nlsc-gray', nlscGrayLayer)
+
+    // 6. OpenStreetMap 暗夜雷達濾鏡 (100% 開源, 純前端濾鏡渲染, 永久免 API Key)
+    const osmDarkLayer = new TileLayer({
+      source: new OSM(),
+      className: 'ol-dark-tiles',
+      visible: this.currentType === 'osm-dark',
+      properties: { title: 'OSM 開源暗夜雷達', type: 'osm-dark' },
+    })
+    this.baseLayers.set('osm-dark', osmDarkLayer)
   }
 
   public getLayersArray(): TileLayer<OSM | XYZ>[] {
