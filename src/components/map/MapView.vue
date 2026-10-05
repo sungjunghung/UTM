@@ -553,6 +553,9 @@ function showToast(msg: string) {
       />
     </div>
 
+    <!-- Bottom Gradient Frosted Glass Backdrop (Colorless) -->
+    <div class="footer-glass-backdrop"></div>
+
     <!-- Google Maps Style Base Layer Switcher in Bottom Left Corner -->
     <div class="absolute bottom-4 left-4 z-20 pointer-events-auto select-none">
       <MapLayerSwitcher
