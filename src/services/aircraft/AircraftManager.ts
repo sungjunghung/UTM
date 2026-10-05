@@ -3,6 +3,8 @@ import VectorSource from 'ol/source/Vector'
 import type OlMap from 'ol/Map'
 import MouseWheelZoom from 'ol/interaction/MouseWheelZoom'
 import { fromLonLat } from 'ol/proj'
+import { unByKey } from 'ol/Observable'
+import type { EventsKey } from 'ol/events'
 import { AircraftEntity } from './AircraftEntity'
 import type { AdsbResponse, AircraftInfo } from './types'
 
@@ -42,6 +44,9 @@ export class AircraftManager {
   private isPolling: boolean = false
   private selectedHex: string | null = null
   private followSelected: boolean = false
+  private hoveredHex: string | null = null
+  private singleClickKey: EventsKey | null = null
+  private pointerMoveKey: EventsKey | null = null
 
   // Callbacks
   private updateCallbacks: Set<(list: AircraftInfo[]) => void> = new Set()
@@ -85,17 +90,59 @@ export class AircraftManager {
     this.map.addLayer(this.planeLayer)
 
     // Listen to map click on aircraft
-    this.map.on('singleclick', (evt) => {
+    this.singleClickKey = this.map.on('singleclick', (evt) => {
       let clickedHex: string | null = null
-      this.map?.forEachFeatureAtPixel(evt.pixel, (feature) => {
-        const hex = feature.get('hex')
-        if (hex && !clickedHex) {
-          clickedHex = hex
-        }
-      })
+      this.map?.forEachFeatureAtPixel(
+        evt.pixel,
+        (feature, layer) => {
+          if (layer === this.planeLayer) {
+            const hex = feature.get('hex')
+            if (hex) {
+              clickedHex = hex
+              return true
+            }
+          }
+        },
+        { hitTolerance: 8 }
+      )
 
       if (clickedHex) {
         this.selectAircraft(clickedHex)
+      }
+    })
+
+    // Listen to pointer move over aircraft for visual hover
+    this.pointerMoveKey = this.map.on('pointermove', (evt) => {
+      if (evt.dragging) {
+        this.clearHover()
+        return
+      }
+
+      let foundHex: string | null = null
+      this.map?.forEachFeatureAtPixel(
+        evt.pixel,
+        (feature, layer) => {
+          if (layer === this.planeLayer) {
+            const hex = feature.get('hex')
+            if (hex) {
+              foundHex = hex
+              return true
+            }
+          }
+        },
+        { hitTolerance: 8 }
+      )
+
+      if (foundHex !== this.hoveredHex) {
+        if (this.hoveredHex) {
+          const prev = this.aircraftMap.get(this.hoveredHex)
+          prev?.setHovered(false)
+        }
+        this.hoveredHex = foundHex
+        if (this.hoveredHex) {
+          const next = this.aircraftMap.get(this.hoveredHex)
+          next?.setHovered(true)
+        }
       }
     })
 
@@ -104,6 +151,14 @@ export class AircraftManager {
 
     // Start background polling & 60fps velocity animation loop
     this.start()
+  }
+
+  public clearHover(): void {
+    if (this.hoveredHex) {
+      const prev = this.aircraftMap.get(this.hoveredHex)
+      prev?.setHovered(false)
+      this.hoveredHex = null
+    }
   }
 
   private handleVisibilityChange = (): void => {
@@ -204,6 +259,9 @@ export class AircraftManager {
         this.trailSource.removeFeature(entity.getTrailFeature())
         this.projectionSource.removeFeature(entity.getProjectionFeature())
         this.aircraftMap.delete(hex)
+        if (this.hoveredHex === hex) {
+          this.hoveredHex = null
+        }
         if (this.selectedHex === hex) {
           this.selectAircraft(null)
         }
@@ -379,6 +437,15 @@ export class AircraftManager {
 
   public destroy(): void {
     document.removeEventListener('visibilitychange', this.handleVisibilityChange)
+    this.clearHover()
+    if (this.singleClickKey) {
+      unByKey(this.singleClickKey)
+      this.singleClickKey = null
+    }
+    if (this.pointerMoveKey) {
+      unByKey(this.pointerMoveKey)
+      this.pointerMoveKey = null
+    }
     this.stop()
     this.updateCallbacks.clear()
     this.selectCallbacks.clear()

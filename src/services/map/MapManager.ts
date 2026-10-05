@@ -1,5 +1,6 @@
 import Map from 'ol/Map'
 import View from 'ol/View'
+import type Feature from 'ol/Feature'
 import { fromLonLat, toLonLat } from 'ol/proj'
 import { defaults as defaultControls, ScaleLine } from 'ol/control'
 import { LayerManager } from './LayerManager'
@@ -74,16 +75,53 @@ export class MapManager {
   private bindEvents(): void {
     if (!this.map || !this.view) return
 
-    // Pointer move for coordinate display
+    // Pointer move for coordinate display & clickable feature hover cursor
     this.map.on('pointermove', (event) => {
-      if (this.pointerMoveCallbacks.size === 0) return
       const coordinate = event.coordinate
-      if (!coordinate) {
+      if (coordinate && this.pointerMoveCallbacks.size > 0) {
+        const lonLat = toLonLat(coordinate) as [number, number]
+        this.notifyPointerMove([Number(lonLat[0].toFixed(5)), Number(lonLat[1].toFixed(5))])
+      } else if (!coordinate && this.pointerMoveCallbacks.size > 0) {
         this.notifyPointerMove(null)
+      }
+
+      if (event.dragging) {
+        this.markerManager.setHoveredMarker(null)
+        const targetEl = this.map?.getTargetElement()
+        if (targetEl) targetEl.style.cursor = ''
         return
       }
-      const lonLat = toLonLat(coordinate) as [number, number]
-      this.notifyPointerMove([Number(lonLat[0].toFixed(5)), Number(lonLat[1].toFixed(5))])
+
+      // Hit-test for clickable interactive features (aircraft markers or custom markers)
+      let isClickable = false
+      let hoveredMarker: Feature | null = null
+
+      this.map?.forEachFeatureAtPixel(
+        event.pixel,
+        (feature, layer) => {
+          // 1. Aircraft plane marker
+          if (feature.get('hex') && feature.get('entity')) {
+            isClickable = true
+            return true
+          }
+          // 2. Custom marker
+          if (feature.get('isMarker') || layer === this.markerManager.getLayer()) {
+            isClickable = true
+            hoveredMarker = feature as Feature
+            return true
+          }
+        },
+        { hitTolerance: 8 }
+      )
+
+      // Notify marker manager of hovered marker
+      this.markerManager.setHoveredMarker(hoveredMarker)
+
+      // Update cursor icon to pointer if over a clickable item
+      const targetEl = this.map?.getTargetElement()
+      if (targetEl) {
+        targetEl.style.cursor = isClickable ? 'pointer' : ''
+      }
     })
 
     // Click event

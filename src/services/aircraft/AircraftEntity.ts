@@ -38,6 +38,7 @@ export class AircraftEntity {
   private projectionFeature: Feature<LineString> // Ahead heading vector line
 
   private isSelected: boolean = false
+  private isHovered: boolean = false
 
   constructor(data: RawAircraftData) {
     this.hex = data.hex
@@ -209,6 +210,16 @@ export class AircraftEntity {
     this.updateProjectionVector()
   }
 
+  public setHovered(hovered: boolean): void {
+    if (this.isHovered === hovered) return
+    this.isHovered = hovered
+    this.updateStyle()
+  }
+
+  public getIsHovered(): boolean {
+    return this.isHovered
+  }
+
   public getInfo(): AircraftInfo {
     return {
       hex: this.hex,
@@ -231,7 +242,7 @@ export class AircraftEntity {
   private updateStyle(): void {
     const label = `${this.flight}\n${this.isGround ? 'GND' : `${Math.round(this.altitude / 100)}FL`}`
     this.planeFeature.setStyle(
-      createAircraftStyle(this.heading, this.altitude, this.isGround, label, this.isSelected)
+      createAircraftStyle(this.heading, this.altitude, this.isGround, label, this.isSelected, this.isHovered)
     )
   }
 

@@ -221,7 +221,7 @@ function showToast(msg: string) {
     <!-- OpenLayers Map Viewport (Matches Window 100% W & H) -->
     <div
       ref="mapTarget"
-      class="absolute inset-0 w-full h-full cursor-crosshair focus:outline-none"
+      class="absolute inset-0 w-full h-full cursor-default focus:outline-none"
       tabindex="0"
     ></div>
 

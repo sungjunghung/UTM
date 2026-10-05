@@ -1,4 +1,4 @@
-import { Icon, Style, Text, Fill, Stroke } from 'ol/style'
+import { Icon, Style, Text, Fill, Stroke, Circle as CircleStyle } from 'ol/style'
 
 // Clean top-down aircraft SVG pointing North (up)
 function getAirplaneSvg(color: string): string {
@@ -34,31 +34,92 @@ export function createAircraftStyle(
   altitude: number,
   isGround: boolean,
   label?: string,
-  isSelected: boolean = false
-): Style {
-  const color = isSelected ? '#ec4899' : getAltitudeColor(altitude, isGround)
-  const src = getCachedSvgUri(color)
+  isSelected: boolean = false,
+  isHovered: boolean = false
+): Style[] {
+  const baseColor = isSelected ? '#ec4899' : getAltitudeColor(altitude, isGround)
+  const src = getCachedSvgUri(baseColor)
   const rotation = (heading * Math.PI) / 180
 
-  return new Style({
-    image: new Icon({
-      src,
-      anchor: [0.5, 0.5],
-      rotateWithView: true,
-      rotation,
-      scale: isSelected ? 1.3 : 1.0,
-    }),
-    text: label
-      ? new Text({
-          text: label,
-          offsetY: 20,
-          font: isSelected ? 'bold 11px system-ui' : '10px system-ui',
-          fill: new Fill({ color: '#ffffff' }),
-          stroke: new Stroke({ color: '#0f172a', width: 3 }),
-          backgroundFill: isSelected ? new Fill({ color: 'rgba(236, 72, 153, 0.85)' }) : undefined,
-          padding: isSelected ? [2, 4, 1, 4] : undefined,
-        })
-      : undefined,
-    zIndex: isSelected ? 100 : 20,
-  })
+  const styles: Style[] = []
+
+  // 1. Halo Ring for Selected or Hovered state
+  if (isSelected) {
+    styles.push(
+      new Style({
+        image: new CircleStyle({
+          radius: 20,
+          stroke: new Stroke({ color: '#ec4899', width: 2.5 }),
+          fill: new Fill({ color: 'rgba(236, 72, 153, 0.22)' }),
+        }),
+        zIndex: 98,
+      })
+    )
+  } else if (isHovered) {
+    styles.push(
+      new Style({
+        image: new CircleStyle({
+          radius: 18,
+          stroke: new Stroke({ color: '#38bdf8', width: 2, lineDash: [4, 3] }),
+          fill: new Fill({ color: 'rgba(56, 189, 248, 0.2)' }),
+        }),
+        zIndex: 88,
+      })
+    )
+  }
+
+  // 2. Aircraft Icon and Label
+  const scale = isSelected ? 1.35 : isHovered ? 1.25 : 1.0
+  const zIndex = isSelected ? 100 : isHovered ? 90 : 20
+
+  let textStyle: Text | undefined = undefined
+  if (label) {
+    if (isSelected) {
+      textStyle = new Text({
+        text: label,
+        offsetY: 22,
+        font: 'bold 11px system-ui, sans-serif',
+        fill: new Fill({ color: '#ffffff' }),
+        stroke: new Stroke({ color: '#0f172a', width: 3.5 }),
+        backgroundFill: new Fill({ color: 'rgba(236, 72, 153, 0.92)' }),
+        backgroundStroke: new Stroke({ color: '#ffffff', width: 1 }),
+        padding: [2, 6, 2, 6],
+      })
+    } else if (isHovered) {
+      textStyle = new Text({
+        text: label,
+        offsetY: 22,
+        font: 'bold 11px system-ui, sans-serif',
+        fill: new Fill({ color: '#38bdf8' }),
+        stroke: new Stroke({ color: '#0f172a', width: 3.5 }),
+        backgroundFill: new Fill({ color: 'rgba(15, 23, 42, 0.92)' }),
+        backgroundStroke: new Stroke({ color: '#38bdf8', width: 1.5 }),
+        padding: [2, 5, 2, 5],
+      })
+    } else {
+      textStyle = new Text({
+        text: label,
+        offsetY: 20,
+        font: '10px system-ui, sans-serif',
+        fill: new Fill({ color: '#ffffff' }),
+        stroke: new Stroke({ color: '#0f172a', width: 3 }),
+      })
+    }
+  }
+
+  styles.push(
+    new Style({
+      image: new Icon({
+        src,
+        anchor: [0.5, 0.5],
+        rotateWithView: true,
+        rotation,
+        scale,
+      }),
+      text: textStyle,
+      zIndex,
+    })
+  )
+
+  return styles
 }
