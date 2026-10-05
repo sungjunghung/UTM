@@ -64,17 +64,11 @@ onMounted(() => {
     <!-- Floating Minimal Top Navigation Bar -->
     <header class="absolute top-4 left-4 right-4 z-30 pointer-events-none">
       <div class="flex items-center justify-between">
-        <!-- Brand Badge -->
-        <div class="pointer-events-auto flex items-center gap-2 px-3 py-1.5 rounded-2xl bg-base-100/90 backdrop-blur-md border border-base-300 shadow-xl">
-          <div class="w-8 h-8 rounded-xl bg-primary text-primary-content flex items-center justify-center font-black shadow-sm">
-            <MaterialIcon name="map" :size="20" />
-          </div>
-          <div class="flex items-baseline gap-1.5">
-            <span class="font-extrabold text-base tracking-tight text-primary">
-              UTM Map
-            </span>
-            <span class="badge badge-xs badge-outline font-mono text-[10px]">OpenLayers</span>
-          </div>
+        <!-- Brand Title: Glass effect UTM text only, no background -->
+        <div class="pointer-events-auto select-none pl-1 py-1">
+          <span class="text-2xl sm:text-3xl font-black tracking-[0.22em] text-base-content/90 drop-shadow-[0_2px_10px_rgba(0,0,0,0.35)]">
+            UTM
+          </span>
         </div>
 
         <!-- Theme Picker & Action Icons -->
