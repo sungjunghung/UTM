@@ -9,13 +9,14 @@ const props = defineProps<{
   isLoading: boolean
   error: string | null
   showTrails: boolean
+  showAircraft: boolean
 }>()
 
 const emit = defineEmits<{
   (e: 'selectFlight', hex: string): void
   (e: 'toggleTrails'): void
   (e: 'refresh'): void
-  (e: 'closeModule'): void
+  (e: 'toggleAircraft'): void
 }>()
 
 const searchQuery = ref('')
@@ -50,26 +51,39 @@ const altitudeLegends = [
 <template>
   <div class="flex flex-col items-start gap-2 select-none">
     <!-- Status Pill -->
-    <div class="flex items-center gap-2 p-1.5 pl-3 pr-2 rounded-2xl bg-base-100/90 backdrop-blur-xl border border-base-300 shadow-xl">
+    <div
+      class="flex items-center gap-2 p-1.5 pl-3 pr-2 rounded-2xl bg-base-100/90 backdrop-blur-xl border border-base-300 shadow-xl transition-all"
+      :class="{ 'opacity-60 border-dashed': !showAircraft }"
+    >
       <!-- Radar Pulse Indicator -->
       <div class="relative flex items-center justify-center w-3 h-3">
         <span
           class="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75"
-          :class="error ? 'bg-error' : isLoading ? 'bg-warning' : 'bg-success'"
+          :class="error ? 'bg-error' : isLoading ? 'bg-warning' : showAircraft ? 'bg-success' : 'bg-base-content/30'"
         ></span>
         <span
           class="relative inline-flex rounded-full h-2 w-2"
-          :class="error ? 'bg-error' : isLoading ? 'bg-warning' : 'bg-success'"
+          :class="error ? 'bg-error' : isLoading ? 'bg-warning' : showAircraft ? 'bg-success' : 'bg-base-content/30'"
         ></span>
       </div>
 
       <div class="text-xs font-semibold flex items-center gap-1.5" title="空域即時在空航班與航機">
         <span class="text-base-content/70">空域即時航班:</span>
-        <span class="font-mono font-bold text-primary">{{ aircraftList.length }}</span>
+        <span class="font-mono font-bold" :class="showAircraft ? 'text-primary' : 'text-base-content/50'">{{ aircraftList.length }}</span>
         <span class="text-base-content/60 text-[11px]">架</span>
       </div>
 
       <div class="divider divider-horizontal mx-0.5 h-4"></div>
+
+      <!-- Action: Toggle Visibility (Direct on top bar) -->
+      <button
+        class="btn btn-xs btn-ghost btn-circle"
+        :class="{ 'text-primary': showAircraft, 'text-base-content/40': !showAircraft }"
+        :title="showAircraft ? '隱藏空域即時航班圖層' : '顯示空域即時航班圖層'"
+        @click="emit('toggleAircraft')"
+      >
+        <MaterialIcon :name="showAircraft ? 'visibility' : 'visibility_off'" :size="16" />
+      </button>
 
       <!-- Action: Toggle Search List -->
       <button
@@ -99,15 +113,6 @@ const altitudeLegends = [
         @click="isLegendOpen = !isLegendOpen"
       >
         <MaterialIcon name="palette" :size="16" />
-      </button>
-
-      <!-- Action: Close / Hide Module -->
-      <button
-        class="btn btn-xs btn-ghost btn-circle text-base-content/40 hover:text-error"
-        title="隱藏空域即時航班模組"
-        @click="emit('closeModule')"
-      >
-        <MaterialIcon name="close" :size="14" />
       </button>
     </div>
 
