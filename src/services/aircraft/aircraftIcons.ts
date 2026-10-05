@@ -77,7 +77,8 @@ export function createAircraftStyle(
     if (isSelected) {
       textStyle = new Text({
         text: label,
-        offsetY: 22,
+        textBaseline: 'top',
+        offsetY: 32,
         font: 'bold 11px system-ui, sans-serif',
         fill: new Fill({ color: '#ffffff' }),
         stroke: new Stroke({ color: '#0f172a', width: 3.5 }),
@@ -88,7 +89,8 @@ export function createAircraftStyle(
     } else if (isHovered) {
       textStyle = new Text({
         text: label,
-        offsetY: 22,
+        textBaseline: 'top',
+        offsetY: 28,
         font: 'bold 11px system-ui, sans-serif',
         fill: new Fill({ color: '#38bdf8' }),
         stroke: new Stroke({ color: '#0f172a', width: 3.5 }),
@@ -99,7 +101,8 @@ export function createAircraftStyle(
     } else {
       textStyle = new Text({
         text: label,
-        offsetY: 20,
+        textBaseline: 'top',
+        offsetY: 24,
         font: '10px system-ui, sans-serif',
         fill: new Fill({ color: '#ffffff' }),
         stroke: new Stroke({ color: '#0f172a', width: 3 }),
