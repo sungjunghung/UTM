@@ -51,10 +51,8 @@ onMounted(() => {
   const saved = localStorage.getItem('utm-theme')
   if (saved && themes.includes(saved)) {
     setTheme(saved)
-  } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
-    setTheme('dark')
   } else {
-    setTheme('light')
+    setTheme('dark')
   }
 })
 </script>

@@ -38,10 +38,10 @@ const presets = [
 ]
 
 const layerOptions: { type: BaseLayerType; label: string; icon: string }[] = [
-  { type: 'osm', label: 'OpenStreetMap', icon: 'map' },
-  { type: 'carto-light', label: 'Carto 淺色', icon: 'light_mode' },
-  { type: 'carto-dark', label: 'Carto 暗色', icon: 'dark_mode' },
-  { type: 'opentopo', label: 'OpenTopo 地形', icon: 'terrain' },
+  { type: 'carto-dark', label: '暗夜雷達 (推薦)', icon: 'dark_mode' },
+  { type: 'carto-light', label: '極簡淺灰 (日間)', icon: 'light_mode' },
+  { type: 'opentopo', label: '等高地形 (Topo)', icon: 'terrain' },
+  { type: 'osm', label: '標準街道 (OSM)', icon: 'map' },
 ]
 </script>
 

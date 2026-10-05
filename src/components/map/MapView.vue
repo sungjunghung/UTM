@@ -15,7 +15,7 @@ let mapManager: MapManager | null = null
 let aircraftManager: AircraftManager | null = null
 
 // Reactive state
-const activeLayer = ref<BaseLayerType>('osm')
+const activeLayer = ref<BaseLayerType>('carto-dark')
 const mouseCoord = ref<[number, number] | null>(null)
 const centerCoord = ref<[number, number]>([120.982, 23.838])
 const currentZoom = ref(8)
