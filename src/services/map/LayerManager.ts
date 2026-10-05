@@ -75,6 +75,18 @@ export class LayerManager {
       properties: { title: 'OSM 開源暗夜雷達', type: 'osm-dark' },
     })
     this.baseLayers.set('osm-dark', osmDarkLayer)
+
+    // 7. 衛星空照圖 (Esri World Imagery 高解析度航拍空照影像)
+    const satelliteLayer = new TileLayer({
+      source: new XYZ({
+        url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+        attributions: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community',
+        maxZoom: 19,
+      }),
+      visible: this.currentType === 'satellite',
+      properties: { title: '衛星空照圖', type: 'satellite' },
+    })
+    this.baseLayers.set('satellite', satelliteLayer)
   }
 
   public getLayersArray(): TileLayer<OSM | XYZ>[] {

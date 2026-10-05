@@ -13,6 +13,7 @@ import { AirspaceManager } from '../../services/airspace/AirspaceManager'
 import type { AirspaceZoneInfo, AirspaceFilterOptions } from '../../services/airspace/types'
 import MapToolbar from './MapToolbar.vue'
 import MapStatusOverlay from './MapStatusOverlay.vue'
+import MapLayerSwitcher from './MapLayerSwitcher.vue'
 import AircraftDetailCard from '../aircraft/AircraftDetailCard.vue'
 import AircraftRadarWidget from '../aircraft/AircraftRadarWidget.vue'
 import DroneDetailCard from '../drone/DroneDetailCard.vue'
@@ -429,6 +430,12 @@ function handleResetView() {
   showToast('已重設視角至全台中心')
 }
 
+function handleSwitchBaseLayer(type: BaseLayerType) {
+  activeLayer.value = type
+  mapManager?.switchBaseLayer(type)
+  showToast(type === 'satellite' ? '已切換為衛星空照圖' : '已切換為標準地圖')
+}
+
 let toastTimer: ReturnType<typeof setTimeout> | null = null
 function showToast(msg: string) {
   clickToast.value = msg
@@ -540,6 +547,14 @@ function showToast(msg: string) {
         v-if="selectedAirspace"
         :zone="selectedAirspace"
         @close="handleCloseAirspaceDetail"
+      />
+    </div>
+
+    <!-- Google Maps Style Base Layer Switcher in Bottom Left Corner -->
+    <div class="absolute bottom-4 left-4 z-20 pointer-events-auto select-none">
+      <MapLayerSwitcher
+        :current-layer="activeLayer"
+        @switch-layer="handleSwitchBaseLayer"
       />
     </div>
 

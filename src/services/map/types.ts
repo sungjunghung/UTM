@@ -1,4 +1,4 @@
-export type BaseLayerType = 'osm' | 'carto-light' | 'carto-dark' | 'opentopo' | 'nlsc-gray' | 'osm-dark'
+export type BaseLayerType = 'osm' | 'carto-light' | 'carto-dark' | 'opentopo' | 'nlsc-gray' | 'osm-dark' | 'satellite'
 
 export interface MapManagerOptions {
   target: HTMLElement | string
