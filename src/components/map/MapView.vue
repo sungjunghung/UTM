@@ -6,17 +6,24 @@ import { MapManager } from '../../services/map/MapManager'
 import type { BaseLayerType } from '../../services/map/types'
 import { AircraftManager } from '../../services/aircraft/AircraftManager'
 import type { AircraftInfo } from '../../services/aircraft/types'
+import { DroneManager } from '../../services/drone/DroneManager'
+import type { DroneInfo } from '../../services/drone/types'
 import MapToolbar from './MapToolbar.vue'
 import MapStatusOverlay from './MapStatusOverlay.vue'
 import AircraftDetailCard from '../aircraft/AircraftDetailCard.vue'
 import AircraftRadarWidget from '../aircraft/AircraftRadarWidget.vue'
+import DroneDetailCard from '../drone/DroneDetailCard.vue'
+import DroneWidget from '../drone/DroneWidget.vue'
 import MaterialIcon from '../MaterialIcon.vue'
 
 const mapTarget = ref<HTMLDivElement | null>(null)
 const detailOverlayTarget = ref<HTMLDivElement | null>(null)
+const droneOverlayTarget = ref<HTMLDivElement | null>(null)
 let mapManager: MapManager | null = null
 let aircraftManager: AircraftManager | null = null
+let droneManager: DroneManager | null = null
 let detailOverlay: Overlay | null = null
+let droneOverlay: Overlay | null = null
 
 // Reactive state
 const activeLayer = ref<BaseLayerType>('osm-dark')
@@ -32,6 +39,12 @@ const isFollowingFlight = ref(false)
 const isAircraftLoading = ref(false)
 const aircraftError = ref<string | null>(null)
 const showTrails = ref(true)
+
+// Drone state
+const droneList = ref<DroneInfo[]>([])
+const selectedDrone = ref<DroneInfo | null>(null)
+const isFollowingDrone = ref(false)
+const showDrones = ref(true)
 
 let unsubPointer: (() => void) | null = null
 let unsubClick: (() => void) | null = null
@@ -86,6 +99,8 @@ onMounted(() => {
     aircraftManager.onSelect((info) => {
       selectedAircraft.value = info
       if (info && detailOverlay) {
+        // Clear drone selection to avoid overlay clutter
+        handleCloseDroneDetail()
         detailOverlay.setPosition(fromLonLat([info.longitude, info.latitude]))
       } else if (!info && detailOverlay) {
         detailOverlay.setPosition(undefined)
@@ -117,6 +132,59 @@ onMounted(() => {
 
     aircraftManager.onError((err) => {
       aircraftError.value = err
+    })
+
+    // 3. Instantiate OOP DroneManager for Airspace Real-time Drones (UTM)
+    droneManager = new DroneManager({
+      centerLat: 24.7887,
+      centerLon: 121.0028,
+      showTrails: true,
+      showMissionPaths: true,
+    })
+
+    droneManager.attachToMap(olMap)
+
+    // Mount drone detail card overlay
+    if (droneOverlayTarget.value) {
+      droneOverlay = new Overlay({
+        element: droneOverlayTarget.value,
+        positioning: 'bottom-left',
+        offset: [28, -24],
+        stopEvent: true,
+      })
+      olMap.addOverlay(droneOverlay)
+    }
+
+    droneManager.onUpdate((list) => {
+      droneList.value = list
+      if (selectedDrone.value) {
+        const updated = list.find((d) => d.id === selectedDrone.value?.id)
+        if (updated) selectedDrone.value = updated
+      }
+    })
+
+    droneManager.onSelect((info) => {
+      selectedDrone.value = info
+      if (info && droneOverlay) {
+        // Clear aircraft selection to avoid overlap
+        handleCloseDetail()
+        droneOverlay.setPosition(fromLonLat([info.longitude, info.latitude]))
+      } else if (!info && droneOverlay) {
+        droneOverlay.setPosition(undefined)
+        isFollowingDrone.value = false
+        droneManager?.setFollowSelected(false)
+      }
+    })
+
+    droneManager.onSelectedMove((lonLat, info) => {
+      if (droneOverlay && selectedDrone.value) {
+        droneOverlay.setPosition(fromLonLat(lonLat))
+      }
+      selectedDrone.value = info
+    })
+
+    droneManager.onFollowChange((following) => {
+      isFollowingDrone.value = following
     })
   }
 
@@ -166,8 +234,14 @@ onUnmounted(() => {
     mapManager.getMap()?.removeOverlay(detailOverlay)
     detailOverlay = null
   }
+  if (droneOverlay && mapManager) {
+    mapManager.getMap()?.removeOverlay(droneOverlay)
+    droneOverlay = null
+  }
+  droneManager?.destroy()
   aircraftManager?.destroy()
   mapManager?.destroy()
+  droneManager = null
   aircraftManager = null
   mapManager = null
 })
@@ -196,6 +270,37 @@ function handleToggleTrails() {
   showTrails.value = !showTrails.value
   aircraftManager?.toggleTrails(showTrails.value)
   showToast(showTrails.value ? '已開啟飛行尾跡' : '已關閉飛行尾跡')
+}
+
+// Drone Controls
+function handleSelectDrone(id: string) {
+  droneManager?.selectDrone(id)
+}
+
+function handleCloseDroneDetail() {
+  droneManager?.selectDrone(null)
+  selectedDrone.value = null
+  isFollowingDrone.value = false
+  droneManager?.setFollowSelected(false)
+  droneOverlay?.setPosition(undefined)
+}
+
+function handleToggleFollowDrone() {
+  const next = !isFollowingDrone.value
+  isFollowingDrone.value = next
+  droneManager?.setFollowSelected(next)
+  showToast(next ? '已開啟無人機鏡頭鎖定追蹤' : '已關閉鏡頭鎖定')
+}
+
+function handleToggleDrones() {
+  showDrones.value = !showDrones.value
+  droneManager?.toggleLayer(showDrones.value)
+  showToast(showDrones.value ? '已開啟無人機圖層' : '已隱藏無人機圖層')
+}
+
+function handleFocusDroneZone() {
+  mapManager?.flyTo([121.0028, 24.7887], 13.5)
+  showToast('已聚焦新竹國網中心無人機空域')
 }
 
 function handleRefreshAircraft() {
@@ -264,8 +369,8 @@ function showToast(msg: string) {
     <!-- Floating Top Navigation Bar with UTM Title & Radar Tracking Widget -->
     <header class="absolute top-4 left-4 right-4 z-30 pointer-events-none">
       <div class="flex items-start justify-between">
-        <!-- Brand Title & Radar Widget: Pure Borderless Glass UTM Text + Radar Tracking -->
-        <div class="pointer-events-auto flex items-start gap-3">
+        <!-- Brand Title & Radar/Drone Widgets: Pure Borderless Glass UTM Text + Aircraft & Drone tracking -->
+        <div class="pointer-events-auto flex items-start gap-2.5 flex-wrap">
           <div class="pt-1.5 select-none pl-2">
             <span class="glass-brand-text cursor-default" title="Universal Transverse Mercator">
               UTM
@@ -279,6 +384,13 @@ function showToast(msg: string) {
             @select-flight="handleSelectFlight"
             @toggle-trails="handleToggleTrails"
             @refresh="handleRefreshAircraft"
+          />
+          <DroneWidget
+            :drone-list="droneList"
+            :show-drones="showDrones"
+            @select-drone="handleSelectDrone"
+            @toggle-drones="handleToggleDrones"
+            @focus-drone-zone="handleFocusDroneZone"
           />
         </div>
 
@@ -311,6 +423,17 @@ function showToast(msg: string) {
         :is-following="isFollowingFlight"
         @close="handleCloseDetail"
         @toggle-follow="handleToggleFollow"
+      />
+    </div>
+
+    <!-- OpenLayers Map Overlay: Drone Detail HUD directly tethered to the drone -->
+    <div ref="droneOverlayTarget" class="pointer-events-auto select-none">
+      <DroneDetailCard
+        v-if="selectedDrone"
+        :drone="selectedDrone"
+        :is-following="isFollowingDrone"
+        @close="handleCloseDroneDetail"
+        @toggle-follow="handleToggleFollowDrone"
       />
     </div>
 
