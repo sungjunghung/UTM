@@ -74,7 +74,6 @@ const airspaceFilterOptions = ref<AirspaceFilterOptions>({
 })
 
 let unsubPointer: (() => void) | null = null
-let unsubClick: (() => void) | null = null
 let unsubView: (() => void) | null = null
 let resizeObserver: ResizeObserver | null = null
 
@@ -258,36 +257,15 @@ onMounted(() => {
     centerCoord.value = center
   })
 
-  unsubClick = mapManager.onClick((coords) => {
-    // If not clicking on an aircraft, can drop standard marker
-    if (!selectedAircraft.value && mapManager) {
-      mapManager.addMarker({
-        coordinate: coords,
-        title: `標記 (${coords[0].toFixed(3)}, ${coords[1].toFixed(3)})`,
-        color: '#06b6d4',
-      })
-      showToast(`已在 [${coords[0]}, ${coords[1]}] 建立標記`)
-    }
-  })
-
   // Watch container size changes for responsive map
   resizeObserver = new ResizeObserver(() => {
     mapManager?.updateSize()
   })
   resizeObserver.observe(mapTarget.value)
-
-  // Add initial sample marker at NCHC (新竹國網中心)
-  mapManager.addMarker({
-    coordinate: [121.0028, 24.7887],
-    title: 'NCHC 國研院國網中心',
-    description: '國家高速網路與計算中心',
-    color: '#3b82f6',
-  })
 })
 
 onUnmounted(() => {
   unsubPointer?.()
-  unsubClick?.()
   unsubView?.()
   resizeObserver?.disconnect()
   if (detailOverlay && mapManager) {
@@ -451,31 +429,6 @@ function handleResetView() {
   showToast('已重設視角至全台中心')
 }
 
-function handleSwitchLayer(layer: BaseLayerType) {
-  activeLayer.value = layer
-  mapManager?.switchBaseLayer(layer)
-  showToast(`已切換底圖為: ${layer}`)
-}
-
-function handleFlyTo(coords: [number, number], zoom: number) {
-  mapManager?.flyTo(coords, zoom)
-}
-
-function handleAddMarkerAtCenter() {
-  if (!mapManager) return
-  mapManager.addMarker({
-    coordinate: centerCoord.value,
-    title: `中心標記 (${centerCoord.value[0].toFixed(3)}, ${centerCoord.value[1].toFixed(3)})`,
-    color: '#f59e0b',
-  })
-  showToast(`已在畫面中心點建立標記`)
-}
-
-function handleClearMarkers() {
-  mapManager?.clearMarkers()
-  showToast('已清除所有標記')
-}
-
 let toastTimer: ReturnType<typeof setTimeout> | null = null
 function showToast(msg: string) {
   clickToast.value = msg
@@ -561,14 +514,9 @@ function showToast(msg: string) {
     <!-- Floating Top-Right Map Controls Toolbar -->
     <aside class="absolute top-20 right-4 z-20">
       <MapToolbar
-        :active-layer="activeLayer"
         @zoom-in="handleZoomIn"
         @zoom-out="handleZoomOut"
         @reset-view="handleResetView"
-        @switch-layer="handleSwitchLayer"
-        @fly-to="handleFlyTo"
-        @add-marker-at-center="handleAddMarkerAtCenter"
-        @clear-markers="handleClearMarkers"
       />
     </aside>
 
