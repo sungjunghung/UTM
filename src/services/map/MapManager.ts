@@ -65,6 +65,7 @@ export class MapManager {
           steps: 4,
           text: true,
           minWidth: 120,
+          target: 'utm-scale-target',
         }),
       ]),
     })

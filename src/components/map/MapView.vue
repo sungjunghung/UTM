@@ -578,6 +578,9 @@ function showToast(msg: string) {
       />
     </div>
 
+    <!-- Scale Line Target in Bottom Right Corner (z-30, renders on top of glass blur) -->
+    <div id="utm-scale-target" class="pointer-events-none select-none"></div>
+
     <!-- Notification Toast -->
     <transition
       enter-active-class="transition duration-200 ease-out"

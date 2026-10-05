@@ -15,12 +15,29 @@ body,
   overflow: hidden;
 }
 
-/* Move OpenLayers scale bar & scale line to bottom right while keeping original look */
+/* Move OpenLayers scale bar to bottom right at z-30 (above any backdrop) */
+#utm-scale-target {
+  position: absolute;
+  bottom: 16px;
+  right: 16px;
+  z-index: 30;
+  pointer-events: none;
+}
+
+#utm-scale-target .ol-scale-bar,
+#utm-scale-target .ol-scale-line {
+  position: relative !important;
+  left: auto !important;
+  right: auto !important;
+  bottom: auto !important;
+}
+
 .ol-scale-bar,
 .ol-scale-line {
   left: auto !important;
   right: 16px !important;
   bottom: 16px !important;
+  z-index: 30 !important;
 }
 
 /* Remove bottom right attribution text */
@@ -48,15 +65,19 @@ body,
   position: absolute;
   bottom: 0;
   left: 0;
-  right: 0;
+  right: 180px;
   height: 84px;
   pointer-events: none;
   z-index: 15;
   background: transparent !important;
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  mask-image: linear-gradient(to top, rgba(0, 0, 0, 1) 0%, rgba(0, 0, 0, 0.75) 55%, rgba(0, 0, 0, 0) 100%);
-  -webkit-mask-image: linear-gradient(to top, rgba(0, 0, 0, 1) 0%, rgba(0, 0, 0, 0.75) 55%, rgba(0, 0, 0, 0) 100%);
+  mask-image: linear-gradient(to top, rgba(0, 0, 0, 1) 0%, rgba(0, 0, 0, 0.75) 55%, rgba(0, 0, 0, 0) 100%),
+              linear-gradient(to left, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 1) 40px);
+  -webkit-mask-image: linear-gradient(to top, rgba(0, 0, 0, 1) 0%, rgba(0, 0, 0, 0.75) 55%, rgba(0, 0, 0, 0) 100%),
+                      linear-gradient(to left, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 1) 40px);
+  mask-composite: intersect;
+  -webkit-mask-composite: destination-in;
 }
 
 /* OpenStreetMap Client-side Dark Radar Mode (100% Open Source & Zero API Key) */
