@@ -455,6 +455,9 @@ function showToast(msg: string) {
       tabindex="0"
     ></div>
 
+    <!-- Top Header Gradient Frosted Glass Backdrop -->
+    <div class="header-glass-backdrop"></div>
+
     <!-- Floating Top Navigation Bar with UTM Title & Radar Tracking Widget -->
     <header class="absolute top-4 left-4 right-4 z-30 pointer-events-none">
       <div class="flex items-start justify-between">
