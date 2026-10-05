@@ -616,8 +616,8 @@ function showToast(msg: string) {
       leave-to-class="opacity-0 translate-y-2"
     >
       <div v-if="clickToast" class="toast toast-top toast-center z-50">
-        <div class="alert alert-info py-2 px-4 shadow-2xl text-xs flex items-center gap-2 border border-info/30">
-          <MaterialIcon name="info" :size="18" />
+        <div class="alert alert-info py-2.5 px-5 shadow-2xl text-sm font-medium flex items-center gap-2.5 border border-info/30">
+          <MaterialIcon name="info" :size="20" />
           <span>{{ clickToast }}</span>
         </div>
       </div>

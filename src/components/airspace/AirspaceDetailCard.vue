@@ -33,8 +33,8 @@ const emit = defineEmits<{
           <MaterialIcon :name="zone.zoneType === 'red' ? 'gpp_bad' : 'warning'" :size="19" />
         </div>
         <div class="min-w-0">
-          <div class="flex items-center gap-1.5">
-            <h3 class="font-extrabold text-base tracking-wider leading-none truncate text-white">
+          <div class="flex items-center gap-2">
+            <h3 class="font-extrabold text-lg tracking-wider leading-none truncate text-white">
               {{ zone.name }}
             </h3>
             <span
@@ -48,7 +48,7 @@ const emit = defineEmits<{
               {{ zone.zoneType === 'red' ? '禁航區' : '限航區' }}
             </span>
           </div>
-          <p class="text-xs text-slate-300 mt-1 truncate font-mono">
+          <p class="text-sm text-slate-300 mt-1 truncate font-mono">
             {{ zone.authority }} · 交通部民航局法定圖資
           </p>
         </div>
@@ -59,27 +59,27 @@ const emit = defineEmits<{
         title="關閉"
         @click="emit('close')"
       >
-        <MaterialIcon name="close" :size="16" />
+        <MaterialIcon name="close" :size="18" />
       </button>
     </div>
 
     <!-- Body Information -->
-    <div class="p-3.5 space-y-2.5 text-xs bg-slate-900/80">
+    <div class="p-4 space-y-3 text-sm bg-slate-900/80">
       <!-- Legal Regulation Notice -->
-      <div class="p-2.5 rounded-sm bg-slate-800/80 border border-slate-700/70 space-y-1">
-        <div class="flex items-center gap-1.5 text-xs font-bold" :class="zone.zoneType === 'red' ? 'text-rose-400' : 'text-amber-400'">
-          <MaterialIcon name="policy" :size="15" />
+      <div class="p-3 rounded-sm bg-slate-800/80 border border-slate-700/70 space-y-1.5">
+        <div class="flex items-center gap-2 text-sm font-bold" :class="zone.zoneType === 'red' ? 'text-rose-400' : 'text-amber-400'">
+          <MaterialIcon name="policy" :size="18" />
           <span>{{ zone.zoneType === 'red' ? '禁止操作無人機' : '限制操作無人機 (依規定申請)' }}</span>
         </div>
-        <p class="text-xs text-slate-200 leading-relaxed mt-0.5">
+        <p class="text-sm text-slate-200 leading-relaxed mt-1">
           {{ zone.description }}
         </p>
       </div>
 
       <!-- Legal Penalties -->
-      <div v-if="zone.penalty" class="p-2.5 rounded-sm bg-rose-950/30 border border-rose-900/40 text-xs text-rose-200/90 leading-normal">
-        <div class="font-bold mb-1 flex items-center gap-1.5 text-rose-400">
-          <MaterialIcon name="gavel" :size="14" />
+      <div v-if="zone.penalty" class="p-3 rounded-sm bg-rose-950/30 border border-rose-900/40 text-sm text-rose-200/90 leading-normal">
+        <div class="font-bold mb-1.5 flex items-center gap-2 text-rose-400">
+          <MaterialIcon name="gavel" :size="16" />
           <span>罰則規定</span>
         </div>
         {{ zone.penalty }}
@@ -88,8 +88,8 @@ const emit = defineEmits<{
       <!-- Footer Metadata -->
       <div class="flex items-center justify-between text-xs font-mono text-slate-400 pt-1">
         <span>圖資層: 民航局 UAV_fs_ryg (第0層)</span>
-        <span class="text-emerald-400 flex items-center gap-1 font-semibold">
-          <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+        <span class="text-emerald-400 flex items-center gap-1.5 font-semibold">
+          <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
           即時圖資
         </span>
       </div>

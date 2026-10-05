@@ -68,24 +68,24 @@ onMounted(() => {
             <div
               tabindex="0"
               role="button"
-              class="btn btn-sm px-2.5 rounded-md bg-base-100/95 backdrop-blur-md border border-base-300 shadow-lg gap-1.5"
+              class="btn btn-sm px-3 rounded-md bg-base-100/95 backdrop-blur-md border border-base-300 shadow-lg gap-2 text-sm"
             >
-              <MaterialIcon name="palette" :size="15" />
-              <span class="capitalize text-xs hidden sm:inline">{{ currentTheme }}</span>
-              <MaterialIcon name="expand_more" :size="14" />
+              <MaterialIcon name="palette" :size="18" />
+              <span class="capitalize text-sm font-medium hidden sm:inline">{{ currentTheme }}</span>
+              <MaterialIcon name="expand_more" :size="16" />
             </div>
             <ul
               tabindex="0"
-              class="dropdown-content menu p-1.5 shadow-2xl bg-base-200/95 backdrop-blur-md rounded-md w-44 max-h-80 overflow-y-auto z-50 border border-base-300 text-xs space-y-0.5"
+              class="dropdown-content menu p-2 shadow-2xl bg-base-200/95 backdrop-blur-md rounded-md w-48 max-h-80 overflow-y-auto z-50 border border-base-300 text-sm space-y-1"
             >
               <li v-for="t in themes" :key="t">
                 <button
-                  class="flex justify-between capitalize"
+                  class="flex justify-between capitalize py-2 text-sm"
                   :class="{ active: currentTheme === t }"
                   @click="setTheme(t)"
                 >
                   <span>{{ t }}</span>
-                  <MaterialIcon v-if="currentTheme === t" name="check" :size="14" />
+                  <MaterialIcon v-if="currentTheme === t" name="check" :size="16" />
                 </button>
               </li>
             </ul>

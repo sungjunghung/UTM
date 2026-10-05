@@ -81,17 +81,17 @@ const layerOptions: { type: BaseLayerType; label: string; icon: string }[] = [
         <div tabindex="0" role="button" class="btn btn-sm btn-ghost join-item p-2 hover:bg-primary hover:text-primary-content transition-colors" title="切換底圖 (Base Layers)">
           <MaterialIcon name="layers" :size="18" />
         </div>
-        <ul tabindex="0" class="dropdown-content menu p-1.5 shadow-2xl bg-base-200/95 backdrop-blur-md rounded-md w-44 border border-base-300 text-xs space-y-0.5 z-50">
-          <li class="menu-title text-xs uppercase tracking-wider text-base-content/60 font-semibold px-2 py-1">
+        <ul tabindex="0" class="dropdown-content menu p-2 shadow-2xl bg-base-200/95 backdrop-blur-md rounded-md w-52 border border-base-300 text-sm space-y-1 z-50">
+          <li class="menu-title text-sm uppercase tracking-wider text-base-content/80 font-bold px-2 py-1.5">
             底圖圖層 (Layers)
           </li>
           <li v-for="layer in layerOptions" :key="layer.type">
             <button
-              class="rounded-sm py-1.5"
+              class="rounded-sm py-2 text-sm"
               :class="{ 'active font-bold': props.activeLayer === layer.type }"
               @click="emit('switchLayer', layer.type)"
             >
-              <MaterialIcon :name="layer.icon" :size="15" />
+              <MaterialIcon :name="layer.icon" :size="18" />
               <span>{{ layer.label }}</span>
             </button>
           </li>
@@ -103,13 +103,13 @@ const layerOptions: { type: BaseLayerType; label: string; icon: string }[] = [
         <div tabindex="0" role="button" class="btn btn-sm btn-ghost join-item p-2 hover:bg-primary hover:text-primary-content transition-colors" title="快速導航 (Presets)">
           <MaterialIcon name="explore" :size="18" />
         </div>
-        <ul tabindex="0" class="dropdown-content menu p-1.5 shadow-2xl bg-base-200/95 backdrop-blur-md rounded-md w-48 border border-base-300 text-xs space-y-0.5 z-50">
-          <li class="menu-title text-xs uppercase tracking-wider text-base-content/60 font-semibold px-2 py-1">
+        <ul tabindex="0" class="dropdown-content menu p-2 shadow-2xl bg-base-200/95 backdrop-blur-md rounded-md w-56 border border-base-300 text-sm space-y-1 z-50">
+          <li class="menu-title text-sm uppercase tracking-wider text-base-content/80 font-bold px-2 py-1.5">
             常用地點 (Presets)
           </li>
           <li v-for="loc in presets" :key="loc.name">
-            <button class="rounded-sm py-1.5" @click="emit('flyTo', loc.coords, loc.zoom)">
-              <MaterialIcon name="pin_drop" :size="16" class="text-primary" />
+            <button class="rounded-sm py-2 text-sm" @click="emit('flyTo', loc.coords, loc.zoom)">
+              <MaterialIcon name="pin_drop" :size="18" class="text-primary" />
               <span>{{ loc.name }}</span>
             </button>
           </li>

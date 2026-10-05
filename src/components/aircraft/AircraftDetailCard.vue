@@ -122,7 +122,7 @@ watch(
           </div>
           <div class="min-w-0">
             <div class="flex items-center gap-1.5">
-              <h3 class="font-extrabold text-base tracking-wider leading-none truncate">
+              <h3 class="font-extrabold text-lg tracking-wider leading-none truncate">
                 {{ aircraft.flight || 'UNKNOWN' }}
               </h3>
               <span
@@ -135,11 +135,11 @@ watch(
                 {{ aircraft.hex.toUpperCase() }}
               </span>
             </div>
-            <p class="text-xs text-white/80 mt-0.5 font-mono truncate">
+            <p class="text-sm text-white/90 mt-1 font-mono truncate">
               <span v-if="aircraftDetails?.fullType">{{ aircraftDetails.fullType }} · </span>
               <span v-else>{{ aircraft.model }} · </span>
               <span>{{ aircraft.registration }}</span>
-              <span v-if="airline" class="text-white/60"> ({{ airline.nameEn }})</span>
+              <span v-if="airline" class="text-white/70"> ({{ airline.nameEn }})</span>
             </p>
           </div>
         </div>
@@ -149,91 +149,91 @@ watch(
           title="關閉"
           @click="emit('close')"
         >
-          <MaterialIcon name="close" :size="16" />
+          <MaterialIcon name="close" :size="18" />
         </button>
       </div>
 
       <!-- Route Banner (Origin -> Destination) if resolved -->
-      <div v-if="routeInfo" class="px-3.5 py-2 bg-slate-800/80 border-b border-slate-700/60">
+      <div v-if="routeInfo" class="px-4 py-2.5 bg-slate-800/80 border-b border-slate-700/60 text-sm">
         <div class="flex items-center justify-between">
           <!-- Departure Airport -->
           <div class="flex-1 min-w-0">
-            <div class="flex items-center gap-1">
-              <span class="text-sm font-black font-mono text-sky-400 tracking-wider">
+            <div class="flex items-center gap-1.5">
+              <span class="text-base font-black font-mono text-sky-400 tracking-wider">
                 {{ routeInfo.origin.iata }}
               </span>
               <span class="text-xs text-slate-400 font-mono">({{ routeInfo.origin.icao }})</span>
             </div>
-            <div class="text-xs text-slate-200 font-medium truncate" :title="routeInfo.origin.name">
+            <div class="text-sm text-slate-200 font-medium truncate" :title="routeInfo.origin.name">
               {{ routeInfo.origin.city || routeInfo.origin.name }}
             </div>
           </div>
 
           <!-- Middle Flight Arrow -->
-          <div class="px-2 flex flex-col items-center shrink-0">
-            <MaterialIcon name="flight_takeoff" :size="16" class="text-sky-400" />
+          <div class="px-2.5 flex flex-col items-center shrink-0">
+            <MaterialIcon name="flight_takeoff" :size="18" class="text-sky-400" />
             <span class="text-xs font-mono text-slate-400">直飛</span>
           </div>
 
           <!-- Destination Airport -->
           <div class="flex-1 min-w-0 text-right">
-            <div class="flex items-center justify-end gap-1">
+            <div class="flex items-center justify-end gap-1.5">
               <span class="text-xs text-slate-400 font-mono">({{ routeInfo.destination.icao }})</span>
-              <span class="text-sm font-black font-mono text-emerald-400 tracking-wider">
+              <span class="text-base font-black font-mono text-emerald-400 tracking-wider">
                 {{ routeInfo.destination.iata }}
               </span>
             </div>
-            <div class="text-xs text-slate-200 font-medium truncate" :title="routeInfo.destination.name">
+            <div class="text-sm text-slate-200 font-medium truncate" :title="routeInfo.destination.name">
               {{ routeInfo.destination.city || routeInfo.destination.name }}
             </div>
           </div>
         </div>
       </div>
       <!-- Route Loading Placeholder -->
-      <div v-else-if="isRouteLoading" class="px-3.5 py-1.5 bg-slate-800/50 border-b border-slate-700/40 text-xs text-slate-400 flex items-center gap-1.5 animate-pulse">
-        <MaterialIcon name="sync" :size="14" class="animate-spin text-sky-400" />
+      <div v-else-if="isRouteLoading" class="px-4 py-2 bg-slate-800/50 border-b border-slate-700/40 text-sm text-slate-400 flex items-center gap-2 animate-pulse">
+        <MaterialIcon name="sync" :size="16" class="animate-spin text-sky-400" />
         <span>正在查詢全球航線庫起迄站...</span>
       </div>
 
       <!-- Quick Telemetry Grid (2x2) -->
-      <div class="p-3 space-y-2 text-xs bg-slate-900/60">
-        <div class="grid grid-cols-2 gap-2">
+      <div class="p-3.5 space-y-2.5 text-sm bg-slate-900/60">
+        <div class="grid grid-cols-2 gap-2.5">
           <!-- Altitude -->
-          <div class="p-2 rounded-sm bg-slate-800/80 border border-slate-700/70">
-            <div class="text-slate-400 flex items-center justify-between text-xs mb-1">
-              <div class="flex items-center gap-1">
-                <MaterialIcon name="height" :size="14" class="text-sky-400" />
+          <div class="p-2.5 rounded-sm bg-slate-800/80 border border-slate-700/70">
+            <div class="text-slate-400 flex items-center justify-between text-sm mb-1">
+              <div class="flex items-center gap-1.5">
+                <MaterialIcon name="height" :size="16" class="text-sky-400" />
                 <span>高度</span>
               </div>
-              <span class="text-xs font-mono text-sky-400 font-bold">{{ flightLevel }}</span>
+              <span class="text-sm font-mono text-sky-400 font-bold">{{ flightLevel }}</span>
             </div>
-            <div class="font-bold text-base font-mono text-slate-100">
+            <div class="font-bold text-lg font-mono text-slate-100">
               <span v-if="aircraft.isGround" class="text-emerald-400">地面滑行</span>
-              <span v-else>{{ aircraft.altitude.toLocaleString() }} <span class="text-xs font-normal text-slate-400">ft</span></span>
+              <span v-else>{{ aircraft.altitude.toLocaleString() }} <span class="text-sm font-normal text-slate-400">ft</span></span>
             </div>
           </div>
 
           <!-- Speed -->
-          <div class="p-2 rounded-sm bg-slate-800/80 border border-slate-700/70">
-            <div class="text-slate-400 flex items-center justify-between text-xs mb-1">
-              <div class="flex items-center gap-1">
-                <MaterialIcon name="speed" :size="14" class="text-amber-400" />
+          <div class="p-2.5 rounded-sm bg-slate-800/80 border border-slate-700/70">
+            <div class="text-slate-400 flex items-center justify-between text-sm mb-1">
+              <div class="flex items-center gap-1.5">
+                <MaterialIcon name="speed" :size="16" class="text-amber-400" />
                 <span>地速</span>
               </div>
-              <span class="text-xs font-mono text-slate-400">{{ speedKmh }} km/h</span>
+              <span class="text-sm font-mono text-slate-400">{{ speedKmh }} km/h</span>
             </div>
-            <div class="font-bold text-base font-mono text-slate-100">
-              {{ aircraft.speed }} <span class="text-xs font-normal text-slate-400">kts</span>
+            <div class="font-bold text-lg font-mono text-slate-100">
+              {{ aircraft.speed }} <span class="text-sm font-normal text-slate-400">kts</span>
             </div>
           </div>
 
           <!-- Heading -->
-          <div class="p-2 rounded-sm bg-slate-800/80 border border-slate-700/70">
-            <div class="text-slate-400 flex items-center gap-1 text-xs mb-1">
-              <MaterialIcon name="navigation" :size="14" class="text-cyan-400" />
+          <div class="p-2.5 rounded-sm bg-slate-800/80 border border-slate-700/70">
+            <div class="text-slate-400 flex items-center gap-1.5 text-sm mb-1">
+              <MaterialIcon name="navigation" :size="16" class="text-cyan-400" />
               <span>航向</span>
             </div>
-            <div class="font-bold text-base font-mono flex items-center gap-1 text-slate-100">
+            <div class="font-bold text-lg font-mono flex items-center gap-1 text-slate-100">
               <span>{{ aircraft.heading.toFixed(0) }}°</span>
               <span
                 class="inline-block transform transition-transform text-cyan-400 font-bold"
@@ -245,24 +245,24 @@ watch(
           </div>
 
           <!-- Vertical Rate -->
-          <div class="p-2 rounded-sm bg-slate-800/80 border border-slate-700/70">
-            <div class="text-slate-400 flex items-center gap-1 text-xs mb-1">
-              <MaterialIcon :name="verticalIcon" :size="14" :class="aircraft.verticalRate >= 0 ? 'text-emerald-400' : 'text-amber-400'" />
+          <div class="p-2.5 rounded-sm bg-slate-800/80 border border-slate-700/70">
+            <div class="text-slate-400 flex items-center gap-1.5 text-sm mb-1">
+              <MaterialIcon :name="verticalIcon" :size="16" :class="aircraft.verticalRate >= 0 ? 'text-emerald-400' : 'text-amber-400'" />
               <span>升降率</span>
             </div>
-            <div class="font-semibold text-sm font-mono leading-tight" :class="aircraft.verticalRate >= 0 ? 'text-emerald-300' : 'text-amber-300'">
+            <div class="font-semibold text-base font-mono leading-tight" :class="aircraft.verticalRate >= 0 ? 'text-emerald-300' : 'text-amber-300'">
               {{ verticalRateText }}
             </div>
           </div>
         </div>
 
         <!-- Coordinates & Squawk -->
-        <div class="flex items-center justify-between px-2.5 py-1.5 rounded-sm bg-slate-800/60 text-xs font-mono text-slate-300 border border-slate-700/60">
+        <div class="flex items-center justify-between px-3 py-2 rounded-sm bg-slate-800/60 text-sm font-mono text-slate-300 border border-slate-700/60">
           <div>
             <span>{{ aircraft.latitude.toFixed(3) }}°N</span>
-            <span class="ml-1.5">{{ aircraft.longitude.toFixed(3) }}°E</span>
+            <span class="ml-2">{{ aircraft.longitude.toFixed(3) }}°E</span>
           </div>
-          <div class="flex items-center gap-2">
+          <div class="flex items-center gap-2.5">
             <span>SQ: <strong class="text-sky-300">{{ aircraft.squawk }}</strong></span>
             <span class="text-slate-400">·</span>
             <span class="text-slate-400">{{ aircraft.trail.length }} 航跡點</span>
@@ -272,11 +272,11 @@ watch(
         <!-- Action: Follow Camera Toggle -->
         <div>
           <button
-            class="btn btn-sm rounded-sm w-full gap-1.5 font-medium text-xs transition-all"
+            class="btn btn-sm rounded-sm w-full gap-2 font-medium text-sm transition-all"
             :class="isFollowing ? 'btn-primary shadow-md shadow-primary/30' : 'bg-slate-800 hover:bg-slate-700 border-slate-600 text-slate-200'"
             @click="emit('toggleFollow')"
           >
-            <MaterialIcon :name="isFollowing ? 'videocam' : 'videocam_off'" :size="16" />
+            <MaterialIcon :name="isFollowing ? 'videocam' : 'videocam_off'" :size="18" />
             <span>{{ isFollowing ? '視角鎖定中（點擊解除）' : '鎖定鏡頭跟隨飛機' }}</span>
           </button>
         </div>
