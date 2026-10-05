@@ -15,6 +15,7 @@ import AircraftDetailCard from '../aircraft/AircraftDetailCard.vue'
 import AircraftRadarWidget from '../aircraft/AircraftRadarWidget.vue'
 import DroneDetailCard from '../drone/DroneDetailCard.vue'
 import DroneWidget from '../drone/DroneWidget.vue'
+import CollisionAlertBanner from '../drone/CollisionAlertBanner.vue'
 import MaterialIcon from '../MaterialIcon.vue'
 
 const mapTarget = ref<HTMLDivElement | null>(null)
@@ -453,6 +454,14 @@ function showToast(msg: string) {
         </div>
       </div>
     </header>
+
+    <!-- Immediate Collision Alert Banner: Pops up automatically at the top of the screen whenever CPA hazard occurs -->
+    <div class="absolute top-18 left-4 right-4 z-40 pointer-events-none flex justify-center">
+      <CollisionAlertBanner
+        :collision-risks="collisionRisks"
+        @focus-collision="handleFocusCollision"
+      />
+    </div>
 
     <!-- Floating Top-Right Map Controls Toolbar -->
     <aside class="absolute top-20 right-4 z-20">
