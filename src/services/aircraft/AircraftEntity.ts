@@ -30,8 +30,11 @@ export class AircraftEntity {
   // Live coordinates on screen [lon, lat]
   public currentLonLat: [number, number]
 
-  // Soft reconciliation offset [dLon, dLat] to smoothly absorb GPS packet discrepancy
-  private correctionOffset: [number, number] = [0, 0]
+  // Purely Forward-Only Flight Regulation (strictly positive speed, zero backward rubberbanding)
+  private lastRawLon: number = 0
+  private lastRawLat: number = 0
+  private speedScale: number = 1.0 // Dynamic forward multiplier (0.25 - 1.4), NEVER negative
+  private crossTrackOffsetMeters: number = 0 // Lateral course offset (meters), blended smoothly
 
   // Animated heading & rotation
   private currentHeading: number
@@ -65,7 +68,10 @@ export class AircraftEntity {
     const lon = data.lon || 0
     const lat = data.lat || 0
     this.currentLonLat = [lon, lat]
-    this.correctionOffset = [0, 0]
+    this.lastRawLon = lon
+    this.lastRawLat = lat
+    this.speedScale = 1.0
+    this.crossTrackOffsetMeters = 0
     this.currentHeading = this.heading
     this.targetHeading = this.heading
     this.lastRenderedHeading = this.heading
@@ -128,37 +134,75 @@ export class AircraftEntity {
     }
 
     if (data.lon !== undefined && data.lat !== undefined && (data.lon !== 0 || data.lat !== 0)) {
-      const errLon = data.lon - this.currentLonLat[0]
-      const errLat = data.lat - this.currentLonLat[1]
-      const distApproxKm = Math.sqrt(errLon * errLon + errLat * errLat) * 111
+      // 1. Detect duplicate identical coordinates from stale API cache
+      const isDuplicate =
+        Math.abs(data.lon - this.lastRawLon) < 1e-7 &&
+        Math.abs(data.lat - this.lastRawLat) < 1e-7
 
-      // 1. Update heading
+      // 2. Update heading
       if (data.track !== undefined) {
         this.heading = data.track
         this.targetHeading = data.track
-      } else if (distApproxKm > 0.05) {
-        const rad = Math.atan2(
-          errLon * Math.cos((data.lat * Math.PI) / 180),
-          errLat
-        )
-        const computedTrack = ((rad * 180) / Math.PI + 360) % 360
-        this.heading = computedTrack
-        this.targetHeading = computedTrack
       }
 
-      // 2. Append verified position to trail (if moved > 30 meters)
-      if (distApproxKm > 0.03) {
-        this.appendTrailPoint([data.lon, data.lat])
-      }
+      if (!isDuplicate) {
+        this.lastRawLon = data.lon
+        this.lastRawLat = data.lat
 
-      // 3. Smooth error reconciliation
-      if (distApproxKm > 40) {
-        // Large jump / signal re-acquisition: snap directly
-        this.currentLonLat = [data.lon, data.lat]
-        this.correctionOffset = [0, 0]
-      } else {
-        // Gently blend discrepancy into forward flight over ~1.5s
-        this.correctionOffset = [errLon, errLat]
+        // Vector from current screen position to reported GPS coordinate in meters
+        const dLonDeg = data.lon - this.currentLonLat[0]
+        const dLatDeg = data.lat - this.currentLonLat[1]
+        const latRad = (this.currentLonLat[1] * Math.PI) / 180
+        const dxMeters = dLonDeg * 111320 * Math.max(Math.cos(latRad), 0.1)
+        const dyMeters = dLatDeg * 111320
+        const distMeters = Math.hypot(dxMeters, dyMeters)
+
+        // 3. Append verified position to trail (if moved > 30 meters)
+        if (distMeters > 30) {
+          this.appendTrailPoint([data.lon, data.lat])
+        }
+
+        // 4. Forward-Only Position Regulation:
+        if (distMeters > 40000) {
+          // Large teleport or re-acquired signal (> 40 km): snap directly
+          this.currentLonLat = [data.lon, data.lat]
+          this.speedScale = 1.0
+          this.crossTrackOffsetMeters = 0
+        } else if (this.isGround || this.speed <= 2) {
+          // Ground or stationary aircraft: align directly
+          this.currentLonLat = [data.lon, data.lat]
+          this.speedScale = 1.0
+          this.crossTrackOffsetMeters = 0
+        } else {
+          // Airborne aircraft: decompose vector into Along-Track and Cross-Track
+          const headingRad = (this.currentHeading * Math.PI) / 180
+          const sinH = Math.sin(headingRad)
+          const cosH = Math.cos(headingRad)
+
+          // Along-track: positive = ahead, negative = behind
+          // Cross-track: positive = right, negative = left
+          const dAlong = dxMeters * sinH + dyMeters * cosH
+          const dCross = dxMeters * cosH - dyMeters * sinH
+
+          // Nominal speed in m/s (minimum 25 m/s ≈ 50 kts)
+          const speedMps = Math.max(this.speed * 0.514444, 25)
+          const expectedCycleDist = speedMps * 4.0
+
+          if (dAlong < 0) {
+            // Reported GPS is behind current dead-reckoned position (latency/cache discrepancy).
+            // STRICT RULE: NEVER PULL THE PLANE BACKWARDS!
+            // We gently coast at a relaxed forward speed so real position catches up.
+            const ratio = 1.0 + dAlong / expectedCycleDist
+            this.speedScale = Math.max(0.25, Math.min(1.0, ratio))
+          } else {
+            // Reported GPS is ahead: gently cruise slightly faster to meet it
+            const ratio = 1.0 + dAlong / expectedCycleDist
+            this.speedScale = Math.min(1.4, Math.max(1.0, ratio))
+          }
+
+          // Lateral error: smoothly blend onto airway over the next ~1.5s
+          this.crossTrackOffsetMeters = Math.max(-400, Math.min(400, dCross))
+        }
       }
     }
 
@@ -168,57 +212,61 @@ export class AircraftEntity {
 
   /**
    * 60 FPS Physics & Motion Controller
-   * Runs EVERY frame. Planes continuously glide forward at speed & heading.
+   * Runs EVERY frame. Planes ONLY glide forward at speed & heading, NEVER backwards.
    */
   public stepPhysics(dt: number): void {
-    if (dt <= 0 || dt > 1.0) dt = 0.016
+    if (dt <= 0 || dt > 0.5) dt = 0.016
 
-    // 1. Continuous Forward Flight:
-    // Move along current heading at reported speed (knots)
-    // 1 knot = 0.514444 m/s. Works for drones, helicopters, and jets.
+    // 1. Continuous Forward Flight & Lateral Course Alignment:
+    // Planes ONLY move forward along their flight vector, NEVER in reverse.
     if (!this.isGround && this.speed > 2) {
-      const distMeters = this.speed * 0.514444 * dt
-      const rad = (this.currentHeading * Math.PI) / 180
-      const dLat = (distMeters * Math.cos(rad)) / 111320
+      // speedScale smoothly relaxes back to nominal cruise speed (1.0)
+      this.speedScale += (1.0 - this.speedScale) * Math.min(dt * 0.4, 0.1)
+
+      // Forward travel in meters: GUARANTEED POSITIVE (FORWARD ONLY)
+      const forwardMps = this.speed * 0.514444 * this.speedScale
+      const forwardDistMeters = Math.max(0, forwardMps * dt)
+
+      // Lateral step: blend cross-track deviation towards zero
+      const crossBlendRate = Math.min(dt * 1.5, 0.2)
+      const crossStepMeters = this.crossTrackOffsetMeters * crossBlendRate
+      this.crossTrackOffsetMeters -= crossStepMeters
+
+      // Convert forward + lateral displacements into world coordinates
+      const headingRad = (this.currentHeading * Math.PI) / 180
+      const sinH = Math.sin(headingRad)
+      const cosH = Math.cos(headingRad)
+
+      const dxMeters = forwardDistMeters * sinH + crossStepMeters * cosH
+      const dyMeters = forwardDistMeters * cosH - crossStepMeters * sinH
+
       const latRad = (this.currentLonLat[1] * Math.PI) / 180
-      const dLon = (distMeters * Math.sin(rad)) / (111320 * Math.max(Math.cos(latRad), 0.1))
+      const dLat = dyMeters / 111320
+      const dLon = dxMeters / (111320 * Math.max(Math.cos(latRad), 0.1))
 
       this.currentLonLat[0] += dLon
       this.currentLonLat[1] += dLat
     }
 
-    // 2. Soft Error Reconciliation:
-    // Gently absorbs the residual GPS discrepancy without pulling backwards
-    if (Math.abs(this.correctionOffset[0]) > 0.000001 || Math.abs(this.correctionOffset[1]) > 0.000001) {
-      const blendRate = Math.min(dt * 1.5, 0.2)
-      const stepLon = this.correctionOffset[0] * blendRate
-      const stepLat = this.correctionOffset[1] * blendRate
+    // 2. Smooth Heading Rotation
+    this.currentHeading = lerpAngle(this.currentHeading, this.targetHeading, Math.min(dt * 4, 0.2))
 
-      this.currentLonLat[0] += stepLon
-      this.currentLonLat[1] += stepLat
-      this.correctionOffset[0] -= stepLon
-      this.correctionOffset[1] -= stepLat
-    }
-
-    // 3. Smooth Heading Rotation
-    this.currentHeading = lerpAngle(this.currentHeading, this.targetHeading, Math.min(dt * 5, 0.2))
-
-    // 4. Update OpenLayers plane marker position
+    // 3. Update OpenLayers plane marker position
     const geom = this.planeFeature.getGeometry()
     if (geom) {
       geom.setCoordinates(fromLonLat(this.currentLonLat))
     }
 
-    // 5. Update visual style if heading rotated by > 1.2 degrees
+    // 4. Update visual style if heading rotated by > 1.2 degrees
     if (Math.abs(this.currentHeading - this.lastRenderedHeading) > 1.2) {
       this.lastRenderedHeading = this.currentHeading
       this.updateStyle()
     }
 
-    // 6. Update real-time flight trail geometry (verified history + current live position)
+    // 5. Update real-time flight trail geometry (verified history + current live position)
     this.updateTrailGeometry()
 
-    // 7. Update forward heading projection line
+    // 6. Update forward heading projection line
     if (this.isSelected) {
       this.updateProjectionVector()
     }
