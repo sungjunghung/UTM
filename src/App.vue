@@ -68,11 +68,10 @@ onMounted(() => {
             <div
               tabindex="0"
               role="button"
-              class="btn btn-sm px-3 rounded-md bg-base-100/95 backdrop-blur-md border border-base-300 shadow-lg gap-2 text-sm"
+              class="btn btn-sm btn-square rounded-md bg-base-100/95 backdrop-blur-md border border-base-300 shadow-lg hover:border-primary transition-colors"
+              title="切換色彩主題"
             >
               <MaterialIcon name="palette" :size="18" />
-              <span class="capitalize text-sm font-medium hidden sm:inline">{{ currentTheme }}</span>
-              <MaterialIcon name="expand_more" :size="16" />
             </div>
             <ul
               tabindex="0"
