@@ -259,44 +259,74 @@ export class DroneManager {
   }
 
   /**
-   * Interactive Simulator: Trigger head-on or intersecting collision path between UAV-01 and UAV-02
+   * Interactive Simulator: Trigger 2 simultaneous collision path encounters
+   * Encounter 1: UAV-01 vs UAV-02 (Hsinchu Science Park)
+   * Encounter 2: UAV-08 vs UAV-06 (Interchange / Guangfu Rd)
    */
   public triggerConflictSimulation(): void {
     const d1 = this.droneMap.get('UAV-NCHC-01')
     const d2 = this.droneMap.get('UAV-ITRI-02')
+    const d8 = this.droneMap.get('UAV-POLICE-08')
+    const d6 = this.droneMap.get('UAV-MED-06')
     if (!d1 || !d2) return
 
     this.isSimulatingConflict = true
 
-    // Center collision encounter point near Hsinchu Science Park / NCHC
-    const centerPoint: [number, number] = [121.006, 24.787]
-
-    // Set UAV-01 coming from West-Southwest heading East-Northeast
-    d1.currentLonLat = [centerPoint[0] - 0.0035, centerPoint[1] - 0.0005]
+    // --- Collision Encounter 1: Hsinchu Science Park [121.006, 24.787] ---
+    const center1: [number, number] = [121.006, 24.787]
+    d1.currentLonLat = [center1[0] - 0.0030, center1[1] - 0.0005]
     d1.speedKmh = 42
     d1.heading = 80
     d1.altitudeAglMeters = 72
+    d1.trail = []
     d1.waypoints = [
-      [centerPoint[0] + 0.004, centerPoint[1] + 0.001],
-      [centerPoint[0] - 0.004, centerPoint[1] - 0.001],
+      [center1[0] + 0.004, center1[1] + 0.001],
+      [center1[0] - 0.004, center1[1] - 0.001],
     ]
 
-    // Set UAV-02 coming from East-Northeast heading West-Southwest at nearly identical altitude
-    d2.currentLonLat = [centerPoint[0] + 0.0035, centerPoint[1] + 0.0005]
+    d2.currentLonLat = [center1[0] + 0.0030, center1[1] + 0.0005]
     d2.speedKmh = 45
     d2.heading = 260
     d2.altitudeAglMeters = 74
+    d2.trail = []
     d2.waypoints = [
-      [centerPoint[0] - 0.004, centerPoint[1] - 0.001],
-      [centerPoint[0] + 0.004, centerPoint[1] + 0.001],
+      [center1[0] - 0.004, center1[1] - 0.001],
+      [center1[0] + 0.004, center1[1] + 0.001],
     ]
 
-    // Pan map to conflict zone
+    // --- Collision Encounter 2: Interchange / Guangfu Rd [121.020, 24.798] ---
+    if (d8 && d6) {
+      const center2: [number, number] = [121.020, 24.798]
+      // UAV-08 (Police) coming from SSW heading NNE
+      d8.currentLonLat = [center2[0] - 0.0018, center2[1] - 0.0028]
+      d8.speedKmh = 40
+      d8.heading = 32
+      d8.altitudeAglMeters = 86
+      d8.trail = []
+      d8.waypoints = [
+        [center2[0] + 0.0025, center2[1] + 0.0040],
+        [center2[0] - 0.0025, center2[1] - 0.0040],
+      ]
+
+      // UAV-06 (Medical) coming from ENE heading WSW
+      d6.currentLonLat = [center2[0] + 0.0032, center2[1] + 0.0012]
+      d6.speedKmh = 46
+      d6.heading = 248
+      d6.altitudeAglMeters = 88
+      d6.trail = []
+      d6.waypoints = [
+        [center2[0] - 0.0040, center2[1] - 0.0020],
+        [center2[0] + 0.0040, center2[1] + 0.0020],
+      ]
+    }
+
+    // Pan map to overview both conflict zones simultaneously
     if (this.map) {
+      const overviewCenter: [number, number] = [121.013, 24.7925]
       this.map.getView().animate({
-        center: fromLonLat(centerPoint),
-        zoom: 15.5,
-        duration: 500,
+        center: fromLonLat(overviewCenter),
+        zoom: 14.8,
+        duration: 600,
       })
     }
   }
@@ -611,6 +641,118 @@ export class DroneManager {
           [120.975, 24.808],
           [120.982, 24.812],
           [120.968, 24.815],
+        ],
+        trail: [],
+        lastSeen: Date.now(),
+      },
+      {
+        id: 'UAV-MED-06',
+        callsign: '台大生醫06號',
+        remoteId: 'CAA-TW-384192',
+        model: 'DJI Inspire 3 RTK',
+        operator: '台大生醫醫院',
+        missionType: '生醫園區急重症檢體冷鏈直送',
+        status: '任務巡檢',
+        latitude: 24.812,
+        longitude: 121.035,
+        altitudeAglMeters: 85,
+        altitudeAglFeet: 279,
+        speedKmh: 48,
+        heading: 245,
+        verticalRateMps: 0,
+        batteryPercent: 93,
+        linkQuality: 96,
+        satellites: 26,
+        homeCoordinate: [121.035, 24.812],
+        waypoints: [
+          [121.042, 24.818],
+          [121.025, 24.805],
+          [121.015, 24.795],
+          [121.038, 24.810],
+        ],
+        trail: [],
+        lastSeen: Date.now(),
+      },
+      {
+        id: 'UAV-GRID-07',
+        callsign: '台電輸電07號',
+        remoteId: 'CAA-TW-492816',
+        model: '翔儀 VTOL Defender',
+        operator: '台灣電力公司供電處',
+        missionType: '新竹超高壓變電所電網熱影像稽查',
+        status: '巡航中',
+        latitude: 24.768,
+        longitude: 121.052,
+        altitudeAglMeters: 98,
+        altitudeAglFeet: 321,
+        speedKmh: 52,
+        heading: 310,
+        verticalRateMps: 0,
+        batteryPercent: 78,
+        linkQuality: 91,
+        satellites: 23,
+        homeCoordinate: [121.052, 24.768],
+        waypoints: [
+          [121.052, 24.768],
+          [121.038, 24.782],
+          [121.020, 24.770],
+          [121.045, 24.755],
+        ],
+        trail: [],
+        lastSeen: Date.now(),
+      },
+      {
+        id: 'UAV-POLICE-08',
+        callsign: '警航交管08號',
+        remoteId: 'CAA-TW-820155',
+        model: 'DJI Matrice 30T',
+        operator: '新竹縣市科技執法組',
+        missionType: '國道一號竹科交流道尖峰車流監控',
+        status: '任務巡檢',
+        latitude: 24.792,
+        longitude: 121.012,
+        altitudeAglMeters: 88,
+        altitudeAglFeet: 288,
+        speedKmh: 40,
+        heading: 35,
+        verticalRateMps: 0,
+        batteryPercent: 86,
+        linkQuality: 97,
+        satellites: 28,
+        homeCoordinate: [121.012, 24.792],
+        waypoints: [
+          [121.012, 24.792],
+          [121.022, 24.805],
+          [121.010, 24.815],
+          [121.005, 24.798],
+        ],
+        trail: [],
+        lastSeen: Date.now(),
+      },
+      {
+        id: 'UAV-AGRI-09',
+        callsign: '農業植保09號',
+        remoteId: 'CAA-TW-174829',
+        model: 'DJI Agras T40',
+        operator: '農業部智慧農業示範場',
+        missionType: '北埔茶園高光譜病蟲害即時監測',
+        status: '定點懸停',
+        latitude: 24.720,
+        longitude: 121.060,
+        altitudeAglMeters: 45,
+        altitudeAglFeet: 147,
+        speedKmh: 12,
+        heading: 180,
+        verticalRateMps: 0,
+        batteryPercent: 68,
+        linkQuality: 88,
+        satellites: 21,
+        homeCoordinate: [121.060, 24.720],
+        waypoints: [
+          [121.060, 24.720],
+          [121.065, 24.715],
+          [121.055, 24.718],
+          [121.058, 24.725],
         ],
         trail: [],
         lastSeen: Date.now(),
