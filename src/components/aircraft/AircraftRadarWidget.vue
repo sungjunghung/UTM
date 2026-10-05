@@ -15,6 +15,7 @@ const emit = defineEmits<{
   (e: 'selectFlight', hex: string): void
   (e: 'toggleTrails'): void
   (e: 'refresh'): void
+  (e: 'closeModule'): void
 }>()
 
 const searchQuery = ref('')
@@ -98,6 +99,15 @@ const altitudeLegends = [
         @click="isLegendOpen = !isLegendOpen"
       >
         <MaterialIcon name="palette" :size="16" />
+      </button>
+
+      <!-- Action: Close / Hide Module -->
+      <button
+        class="btn btn-xs btn-ghost btn-circle text-base-content/40 hover:text-error"
+        title="隱藏空域即時航班模組"
+        @click="emit('closeModule')"
+      >
+        <MaterialIcon name="close" :size="14" />
       </button>
     </div>
 

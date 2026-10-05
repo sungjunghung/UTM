@@ -12,6 +12,7 @@ const emit = defineEmits<{
   (e: 'selectDrone', id: string): void
   (e: 'toggleDrones'): void
   (e: 'focusDroneZone'): void
+  (e: 'closeModule'): void
 }>()
 
 const searchQuery = ref('')
@@ -81,6 +82,15 @@ const filteredList = computed(() => {
         @click="emit('focusDroneZone')"
       >
         <MaterialIcon name="my_location" :size="16" />
+      </button>
+
+      <!-- Action: Close / Hide Module -->
+      <button
+        class="btn btn-xs btn-ghost btn-circle text-base-content/40 hover:text-error"
+        title="隱藏空域即時無人機模組"
+        @click="emit('closeModule')"
+      >
+        <MaterialIcon name="close" :size="14" />
       </button>
     </div>
 

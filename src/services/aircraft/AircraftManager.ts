@@ -419,6 +419,12 @@ export class AircraftManager {
     return this.showTrails
   }
 
+  public toggleLayer(visible: boolean): void {
+    this.planeLayer.setVisible(visible)
+    this.trailLayer.setVisible(visible && this.showTrails)
+    this.projectionLayer.setVisible(visible)
+  }
+
   /**
    * Filter and update visible aircraft features on the map based on current screen extent
    * Runs in 0ms purely on local memory without any network request!

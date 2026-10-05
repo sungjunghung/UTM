@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import Overlay from 'ol/Overlay'
 import { fromLonLat } from 'ol/proj'
 import { MapManager } from '../../services/map/MapManager'
@@ -45,6 +45,15 @@ const droneList = ref<DroneInfo[]>([])
 const selectedDrone = ref<DroneInfo | null>(null)
 const isFollowingDrone = ref(false)
 const showDrones = ref(true)
+
+// Module display visibility state (Screen & Map display toggles)
+const showAircraftModule = ref(true)
+const showDroneModule = ref(true)
+const isModuleMenuOpen = ref(false)
+
+const activeModuleCount = computed(() => {
+  return (showAircraftModule.value ? 1 : 0) + (showDroneModule.value ? 1 : 0)
+})
 
 let unsubPointer: (() => void) | null = null
 let unsubClick: (() => void) | null = null
@@ -303,6 +312,41 @@ function handleFocusDroneZone() {
   showToast('已聚焦新竹國網中心無人機空域')
 }
 
+// Module Display Controls (Show / Hide entire modules on screen & map)
+function handleToggleAircraftModule() {
+  aircraftManager?.toggleLayer(showAircraftModule.value)
+  if (!showAircraftModule.value) {
+    handleCloseDetail()
+    showToast('已隱藏空域即時航班模組（可從頂部【模組】隨時開啟）')
+  } else {
+    showToast('已顯示空域即時航班模組')
+  }
+}
+
+function handleToggleDroneModule() {
+  droneManager?.toggleLayer(showDroneModule.value)
+  if (!showDroneModule.value) {
+    handleCloseDroneDetail()
+    showToast('已隱藏空域即時無人機模組（可從頂部【模組】隨時開啟）')
+  } else {
+    showToast('已顯示空域即時無人機模組')
+  }
+}
+
+function handleSetAllModules(show: boolean) {
+  showAircraftModule.value = show
+  showDroneModule.value = show
+  aircraftManager?.toggleLayer(show)
+  droneManager?.toggleLayer(show)
+  if (!show) {
+    handleCloseDetail()
+    handleCloseDroneDetail()
+    showToast('已隱藏所有空域監控模組')
+  } else {
+    showToast('已顯示所有空域監控模組')
+  }
+}
+
 function handleRefreshAircraft() {
   aircraftManager?.start()
   showToast('正在重新載入空域航班...')
@@ -376,7 +420,94 @@ function showToast(msg: string) {
               UTM
             </span>
           </div>
+
+          <!-- Module Display Switcher Dropdown (Controls on-screen display of Aircraft & Drone modules) -->
+          <div class="relative pt-0.5">
+            <button
+              class="btn btn-xs rounded-2xl bg-base-100/90 backdrop-blur-xl border border-base-300 shadow-md flex items-center gap-1.5 px-2.5 py-1 text-xs hover:border-primary/50 transition-all cursor-pointer"
+              :class="{ 'border-primary text-primary': isModuleMenuOpen }"
+              title="管理空域監控模組顯示與隱藏"
+              @click="isModuleMenuOpen = !isModuleMenuOpen"
+            >
+              <MaterialIcon name="tune" :size="15" />
+              <span>模組 ({{ activeModuleCount }}/2)</span>
+              <MaterialIcon :name="isModuleMenuOpen ? 'expand_less' : 'expand_more'" :size="14" />
+            </button>
+
+            <!-- Dropdown Popover -->
+            <div
+              v-if="isModuleMenuOpen"
+              class="absolute top-9 left-0 w-64 rounded-2xl bg-base-100/95 backdrop-blur-xl border border-base-300 shadow-2xl p-3 space-y-2.5 z-50 text-xs animate-in fade-in zoom-in-95 duration-150"
+            >
+              <div class="flex items-center justify-between pb-1.5 border-b border-base-300">
+                <span class="font-bold flex items-center gap-1.5 text-base-content">
+                  <MaterialIcon name="layers" :size="16" class="text-primary" />
+                  空域監控模組開關
+                </span>
+                <button class="btn btn-ghost btn-circle btn-xs" @click="isModuleMenuOpen = false">
+                  <MaterialIcon name="close" :size="14" />
+                </button>
+              </div>
+
+              <!-- Module 1: Aircraft -->
+              <label class="flex items-center justify-between p-2 rounded-xl bg-base-200/50 hover:bg-base-200 transition-colors cursor-pointer">
+                <div class="flex items-center gap-2">
+                  <div class="w-6 h-6 rounded-lg bg-primary/20 text-primary flex items-center justify-center">
+                    <MaterialIcon name="flight" :size="15" />
+                  </div>
+                  <div>
+                    <div class="font-bold">空域即時航班</div>
+                    <div class="text-[10px] text-base-content/60">民航機 ADS-B</div>
+                  </div>
+                </div>
+                <input
+                  type="checkbox"
+                  class="toggle toggle-primary toggle-xs"
+                  v-model="showAircraftModule"
+                  @change="handleToggleAircraftModule"
+                />
+              </label>
+
+              <!-- Module 2: Drone -->
+              <label class="flex items-center justify-between p-2 rounded-xl bg-base-200/50 hover:bg-base-200 transition-colors cursor-pointer">
+                <div class="flex items-center gap-2">
+                  <div class="w-6 h-6 rounded-lg bg-cyan-500/20 text-cyan-400 flex items-center justify-center">
+                    <MaterialIcon name="toys" :size="15" />
+                  </div>
+                  <div>
+                    <div class="font-bold">空域即時無人機</div>
+                    <div class="text-[10px] text-base-content/60">UTM 低空任務</div>
+                  </div>
+                </div>
+                <input
+                  type="checkbox"
+                  class="toggle toggle-accent toggle-xs"
+                  v-model="showDroneModule"
+                  @change="handleToggleDroneModule"
+                />
+              </label>
+
+              <!-- Quick Bulk Action Buttons -->
+              <div class="flex gap-1.5 pt-1 border-t border-base-300">
+                <button
+                  class="btn btn-xs flex-1 btn-outline"
+                  @click="handleSetAllModules(true)"
+                >
+                  全部顯示
+                </button>
+                <button
+                  class="btn btn-xs flex-1 btn-ghost text-base-content/60"
+                  @click="handleSetAllModules(false)"
+                >
+                  全部隱藏
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Module 1 Widget: Airspace Live Flights (Civil Aircraft) -->
           <AircraftRadarWidget
+            v-if="showAircraftModule"
             :aircraft-list="aircraftList"
             :is-loading="isAircraftLoading"
             :error="aircraftError"
@@ -384,13 +515,24 @@ function showToast(msg: string) {
             @select-flight="handleSelectFlight"
             @toggle-trails="handleToggleTrails"
             @refresh="handleRefreshAircraft"
+            @close-module="
+              showAircraftModule = false;
+              handleToggleAircraftModule();
+            "
           />
+
+          <!-- Module 2 Widget: Airspace Real-time Drones (UAV) -->
           <DroneWidget
+            v-if="showDroneModule"
             :drone-list="droneList"
             :show-drones="showDrones"
             @select-drone="handleSelectDrone"
             @toggle-drones="handleToggleDrones"
             @focus-drone-zone="handleFocusDroneZone"
+            @close-module="
+              showDroneModule = false;
+              handleToggleDroneModule();
+            "
           />
         </div>
 
