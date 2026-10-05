@@ -7,7 +7,7 @@ import { toLonLat } from 'ol/proj'
 import type Feature from 'ol/Feature'
 import type { EventsKey } from 'ol/events'
 import { queryCaaAirspaceGeoJson } from './airspaceService'
-import type { AirspaceZoneInfo, AirspaceGeoJsonFeature } from './types'
+import type { AirspaceZoneInfo, AirspaceGeoJsonFeature, AirspaceFilterOptions } from './types'
 
 export class AirspaceManager {
   private map: OlMap | null = null
@@ -24,9 +24,21 @@ export class AirspaceManager {
   private hoveredFeature: Feature | null = null
   private geoJsonFormat = new GeoJSON()
 
+  private filterOptions: AirspaceFilterOptions = {
+    showRedZones: true,
+    showYellowZones: true,
+    showLabels: true,
+    categories: {
+      airport: true,
+      government: true,
+      fir: true,
+    },
+  }
+
   private hoverCallbacks: Set<(info: AirspaceZoneInfo | null) => void> = new Set()
   private selectCallbacks: Set<(info: AirspaceZoneInfo | null) => void> = new Set()
   private loadingCallbacks: Set<(loading: boolean) => void> = new Set()
+  private filterChangeCallbacks: Set<(options: AirspaceFilterOptions) => void> = new Set()
 
   constructor(visible: boolean = true) {
     this.isVisible = visible
@@ -41,6 +53,49 @@ export class AirspaceManager {
 
   public getLayer(): VectorLayer<VectorSource> {
     return this.vectorLayer
+  }
+
+  public getFilterOptions(): AirspaceFilterOptions {
+    return {
+      ...this.filterOptions,
+      categories: { ...this.filterOptions.categories },
+    }
+  }
+
+  public setFilterOptions(options: Partial<AirspaceFilterOptions>): void {
+    if (options.showRedZones !== undefined) this.filterOptions.showRedZones = options.showRedZones
+    if (options.showYellowZones !== undefined) this.filterOptions.showYellowZones = options.showYellowZones
+    if (options.showLabels !== undefined) this.filterOptions.showLabels = options.showLabels
+    if (options.categories) {
+      this.filterOptions.categories = {
+        ...this.filterOptions.categories,
+        ...options.categories,
+      }
+    }
+    // Re-evaluate styles immediately across all vector features
+    this.vectorLayer.changed()
+    this.filterChangeCallbacks.forEach((cb) => cb(this.getFilterOptions()))
+  }
+
+  public onFilterChange(cb: (options: AirspaceFilterOptions) => void): () => void {
+    this.filterChangeCallbacks.add(cb)
+    return () => this.filterChangeCallbacks.delete(cb)
+  }
+
+  public isFeatureVisible(feature: Feature): boolean {
+    const zoneType = feature.get('限制區')
+    const categoryName = feature.get('空域類別名稱') || ''
+
+    // 1. Zone type filtering (Red / Yellow)
+    if (zoneType === '紅區' && !this.filterOptions.showRedZones) return false
+    if (zoneType === '黃區' && !this.filterOptions.showYellowZones) return false
+
+    // 2. Sub-category filtering
+    if (categoryName.includes('機場') && !this.filterOptions.categories.airport) return false
+    if (categoryName.includes('縣市') && !this.filterOptions.categories.government) return false
+    if (categoryName.includes('情報') && !this.filterOptions.categories.fir) return false
+
+    return true
   }
 
   public attachToMap(map: OlMap): void {
@@ -62,7 +117,7 @@ export class AirspaceManager {
       this.map?.forEachFeatureAtPixel(
         evt.pixel,
         (feature, layer) => {
-          if (layer === this.vectorLayer) {
+          if (layer === this.vectorLayer && this.isFeatureVisible(feature as Feature)) {
             foundFeature = feature as Feature
             return true
           }
@@ -85,7 +140,7 @@ export class AirspaceManager {
       this.map?.forEachFeatureAtPixel(
         evt.pixel,
         (feature, layer) => {
-          if (layer === this.vectorLayer) {
+          if (layer === this.vectorLayer && this.isFeatureVisible(feature as Feature)) {
             clickedFeature = feature as Feature
             return true
           }
@@ -196,13 +251,17 @@ export class AirspaceManager {
   /**
    * Military C2 Tactical Styling for CAA Airspace Restrictions
    */
-  private getFeatureStyle(feature: Feature, resolution: number): Style {
+  private getFeatureStyle(feature: Feature, resolution: number): Style | undefined {
+    if (!this.isFeatureVisible(feature)) {
+      return undefined
+    }
+
     const zoneType = feature.get('限制區')
     const name = feature.get('空域名稱') || ''
     const isRed = zoneType === '紅區'
 
-    // Show name label when resolution is fine enough (approx zoom >= 12)
-    const showLabel = resolution < 40 && !!name
+    // Show name label when showLabels is enabled and resolution is fine enough (approx zoom >= 11.5)
+    const showLabel = this.filterOptions.showLabels && resolution < 50 && !!name
 
     return new Style({
       fill: new Fill({

@@ -10,7 +10,7 @@ import { DroneManager } from '../../services/drone/DroneManager'
 import type { DroneInfo } from '../../services/drone/types'
 import type { CollisionRisk } from '../../services/drone/collisionTypes'
 import { AirspaceManager } from '../../services/airspace/AirspaceManager'
-import type { AirspaceZoneInfo } from '../../services/airspace/types'
+import type { AirspaceZoneInfo, AirspaceFilterOptions } from '../../services/airspace/types'
 import MapToolbar from './MapToolbar.vue'
 import MapStatusOverlay from './MapStatusOverlay.vue'
 import AircraftDetailCard from '../aircraft/AircraftDetailCard.vue'
@@ -62,6 +62,16 @@ const showDrones = ref(true)
 const showAirspace = ref(true)
 const isAirspaceLoading = ref(false)
 const selectedAirspace = ref<AirspaceZoneInfo | null>(null)
+const airspaceFilterOptions = ref<AirspaceFilterOptions>({
+  showRedZones: true,
+  showYellowZones: true,
+  showLabels: true,
+  categories: {
+    airport: true,
+    government: true,
+    fir: true,
+  },
+})
 
 let unsubPointer: (() => void) | null = null
 let unsubClick: (() => void) | null = null
@@ -409,6 +419,13 @@ function handleCloseAirspaceDetail() {
   }
 }
 
+function handleUpdateAirspaceFilter(newOpts: Partial<AirspaceFilterOptions>) {
+  airspaceManager?.setFilterOptions(newOpts)
+  if (airspaceManager) {
+    airspaceFilterOptions.value = airspaceManager.getFilterOptions()
+  }
+}
+
 function handleRefreshAircraft() {
   aircraftManager?.start()
   showToast('正在重新載入空域航班...')
@@ -514,7 +531,9 @@ function showToast(msg: string) {
           <AirspaceWidget
             :show-airspace="showAirspace"
             :is-loading="isAirspaceLoading"
+            :filter-options="airspaceFilterOptions"
             @toggle-airspace="handleToggleAirspace"
+            @update-filter="handleUpdateAirspaceFilter"
           />
         </div>
 

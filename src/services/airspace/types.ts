@@ -36,3 +36,16 @@ export interface AirspaceGeoJsonCollection {
   type: string
   features: AirspaceGeoJsonFeature[]
 }
+
+export interface AirspaceCategoryFilters {
+  airport: boolean // 機場四周禁/限航
+  government: boolean // 縣市機關與關鍵基礎設施
+  fir: boolean // 飛航情報限航區
+}
+
+export interface AirspaceFilterOptions {
+  showRedZones: boolean // 🔴 紅區 (禁航區)
+  showYellowZones: boolean // 🟠 黃區 (限航區)
+  showLabels: boolean // 空域名稱文字標籤
+  categories: AirspaceCategoryFilters
+}
