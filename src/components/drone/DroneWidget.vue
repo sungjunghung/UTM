@@ -259,9 +259,15 @@ const filteredList = computed(() => {
                     : 'badge-info text-white'
                 "
               >
-                {{ risk.severity === 'critical' ? '🔴 緊急衝突' : risk.severity === 'warning' ? '🟠 碰撞警戒' : '🟡 空域注意' }}
+                <template v-if="risk.type === 'no-fly-zone'">🔴 禁航越界</template>
+                <template v-else-if="risk.type === 'altitude-violation'">🟠 限航超高</template>
+                <template v-else>{{ risk.severity === 'critical' ? '🔴 緊急衝突' : risk.severity === 'warning' ? '🟠 碰撞警戒' : '🟡 空域注意' }}</template>
               </span>
-              <span class="truncate">{{ risk.droneACallsign }} ↔ {{ risk.droneBCallsign }}</span>
+              <span class="truncate">
+                <template v-if="risk.type === 'no-fly-zone'">{{ risk.droneACallsign }} ⚡ {{ risk.zoneName }}</template>
+                <template v-else-if="risk.type === 'altitude-violation'">{{ risk.droneACallsign }} ⚡ {{ risk.zoneName }}</template>
+                <template v-else>{{ risk.droneACallsign }} ↔ {{ risk.droneBCallsign }}</template>
+              </span>
             </div>
             <button
               class="btn btn-sm btn-outline btn-ghost text-sm px-2.5 h-8 min-h-0"
@@ -276,25 +282,41 @@ const filteredList = computed(() => {
             </button>
           </div>
 
-          <!-- Spatial CPA Stats Grid -->
+          <!-- Spatial CPA Stats Grid or Violation Stats Grid -->
           <div class="grid grid-cols-3 gap-2 bg-base-100/60 p-2.5 rounded-sm border border-base-content/10 font-mono text-sm">
-            <div>
-              <div class="text-xs text-base-content/70">目前距離</div>
-              <div class="font-bold text-cyan-400 text-sm">{{ risk.currentDistanceMeters }} m</div>
-            </div>
-            <div>
-              <div class="text-xs text-base-content/70">預估 CPA 距離</div>
-              <div
-                class="font-bold text-sm"
-                :class="risk.cpaDistanceMeters < 30 ? 'text-error font-extrabold' : 'text-warning'"
-              >
-                {{ risk.cpaDistanceMeters }} m
+            <template v-if="risk.type === 'no-fly-zone' || risk.type === 'altitude-violation'">
+              <div>
+                <div class="text-xs text-base-content/70">違規類型</div>
+                <div class="font-bold text-cyan-400 text-sm">{{ risk.metricPrimaryValue || '空域違規' }}</div>
               </div>
-            </div>
-            <div>
-              <div class="text-xs text-base-content/70">發生時間</div>
-              <div class="font-bold text-amber-300 text-sm">{{ risk.timeToCpaSeconds }} 秒後</div>
-            </div>
+              <div>
+                <div class="text-xs text-base-content/70">當前高度</div>
+                <div class="font-bold text-sm text-warning">{{ risk.currentAltitudeMeters }} m</div>
+              </div>
+              <div>
+                <div class="text-xs text-base-content/70">{{ risk.metricSecondaryTitle || '管制要求' }}</div>
+                <div class="font-bold text-amber-300 text-sm">{{ risk.metricSecondaryValue || (risk.maxLegalAltitudeMeters ? `≤${risk.maxLegalAltitudeMeters}m` : '禁飛') }}</div>
+              </div>
+            </template>
+            <template v-else>
+              <div>
+                <div class="text-xs text-base-content/70">目前距離</div>
+                <div class="font-bold text-cyan-400 text-sm">{{ risk.currentDistanceMeters ?? 0 }} m</div>
+              </div>
+              <div>
+                <div class="text-xs text-base-content/70">預估 CPA 距離</div>
+                <div
+                  class="font-bold text-sm"
+                  :class="(risk.cpaDistanceMeters ?? 999) < 30 ? 'text-error font-extrabold' : 'text-warning'"
+                >
+                  {{ risk.cpaDistanceMeters ?? 0 }} m
+                </div>
+              </div>
+              <div>
+                <div class="text-xs text-base-content/70">發生時間</div>
+                <div class="font-bold text-amber-300 text-sm">{{ risk.timeToCpaSeconds ?? 0 }} 秒後</div>
+              </div>
+            </template>
           </div>
 
           <!-- Suggested Advisory Action -->

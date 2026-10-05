@@ -31,7 +31,7 @@ export class DroneEntity {
   public satellites: number
   public homeCoordinate: [number, number]
   public currentLonLat: [number, number]
-  public waypoints: [number, number][]
+  public waypoints: ([number, number] | [number, number, number])[]
   public trail: [number, number][] = []
   public lastSeen: number
 
@@ -93,7 +93,7 @@ export class DroneEntity {
     })
 
     // Mission planned corridor
-    const missionCoords = this.waypoints.map((pt) => fromLonLat(pt))
+    const missionCoords = this.waypoints.map((pt) => fromLonLat([pt[0], pt[1]]))
     this.missionFeature = new Feature({
       geometry: new LineString(missionCoords),
       id: this.id,
@@ -191,13 +191,23 @@ export class DroneEntity {
         const distMeters = Math.hypot(dxMeters, dyMeters)
 
         if (distMeters < 8) {
-          // Arrived at waypoint: dwell/hover for 4-6 seconds to inspect
-          this.hoverTimer = 4.5
+          // Arrived at waypoint: dwell/hover for 3 seconds to inspect
+          this.hoverTimer = 3.0
           this.currentWaypointIndex = (this.currentWaypointIndex + 1) % this.waypoints.length
         } else {
           // Calculate heading towards target waypoint
           const targetRad = Math.atan2(dxMeters, dyMeters)
           this.targetHeading = ((targetRad * 180) / Math.PI + 360) % 360
+
+          // Smoothly glide altitude towards waypoint target altitude if specified
+          if (targetWaypoint.length >= 3 && typeof targetWaypoint[2] === 'number') {
+            const targetAlt = targetWaypoint[2]
+            const altDelta = targetAlt - this.altitudeAglMeters
+            this.altitudeAglMeters += altDelta * Math.min(dt * 1.5, 0.2)
+            this.verticalRateMps = Math.round((altDelta * 0.4) * 10) / 10
+          } else {
+            this.verticalRateMps = 0
+          }
 
           // Accelerate to nominal inspection speed (~32 - 45 km/h)
           const cruiseSpeed = 38

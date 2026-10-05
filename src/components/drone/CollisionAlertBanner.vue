@@ -11,7 +11,7 @@ const emit = defineEmits<{
   (e: 'focusCollision', coordinate: [number, number]): void
 }>()
 
-// Sorted collision risks: critical first, then closest timeToCpa
+// Sorted collision & airspace risks: critical first, then warning
 const sortedRisks = computed(() => {
   if (!props.collisionRisks || props.collisionRisks.length === 0) return []
   return [...props.collisionRisks].sort((a, b) => {
@@ -19,7 +19,7 @@ const sortedRisks = computed(() => {
     if (rank[b.severity] !== rank[a.severity]) {
       return rank[b.severity] - rank[a.severity]
     }
-    return a.timeToCpaSeconds - b.timeToCpaSeconds
+    return (a.timeToCpaSeconds || 99) - (b.timeToCpaSeconds || 99)
   })
 })
 </script>
@@ -44,14 +44,12 @@ const sortedRisks = computed(() => {
         :class="
           risk.severity === 'critical'
             ? 'bg-rose-950/95 border-rose-500 shadow-rose-950/70 text-rose-50 ring-1 ring-rose-500/50 animate-pulse'
-            : risk.severity === 'warning'
-            ? 'bg-amber-950/95 border-amber-500 shadow-amber-950/60 text-amber-50'
-            : 'bg-slate-900/95 border-yellow-500 text-yellow-50'
+            : 'bg-amber-950/95 border-amber-500 shadow-amber-950/60 text-amber-50'
         "
-        :title="`點擊立即將地圖視角定位至 ${risk.droneACallsign} 與 ${risk.droneBCallsign} 的預估碰撞點`"
+        :title="`點擊立即將地圖視角定位至警告發生地點`"
         @click="emit('focusCollision', risk.cpaCoordinate)"
       >
-        <!-- Top bar: Alert index, header, drone pair & live countdown -->
+        <!-- Top bar: Alert index, header, drone pair / target & metrics -->
         <div class="flex items-center justify-between gap-3">
           <div class="flex items-center gap-2.5 min-w-0">
             <div
@@ -61,50 +59,86 @@ const sortedRisks = computed(() => {
               <MaterialIcon :name="risk.severity === 'critical' ? 'report' : 'warning'" :size="18" />
             </div>
             <div class="min-w-0">
-              <div class="flex items-center gap-2.5">
+              <div class="flex items-center gap-2.5 flex-wrap sm:flex-nowrap">
+                <!-- Title by Alert Type -->
                 <span
-                  class="font-black text-sm uppercase tracking-wider px-2.5 py-0.5 rounded-sm"
+                  class="font-black text-sm uppercase tracking-wider px-2.5 py-0.5 rounded-sm whitespace-nowrap"
                   :class="risk.severity === 'critical' ? 'bg-rose-500/40 text-rose-200' : 'bg-amber-500/30 text-amber-200'"
                 >
-                  {{ risk.severity === 'critical' ? '🔴 空域緊急碰撞 (CRITICAL)' : '🟠 衝突接近警戒' }}
+                  <template v-if="risk.type === 'no-fly-zone'">
+                    🔴 嚴重違規：誤闖民航局禁航區
+                  </template>
+                  <template v-else-if="risk.type === 'altitude-violation'">
+                    🟠 空域違規：誤觸限航區空域上限
+                  </template>
+                  <template v-else>
+                    {{ risk.severity === 'critical' ? '🔴 空域緊急碰撞 (CRITICAL)' : '🟠 衝突接近警戒' }}
+                  </template>
                 </span>
+
                 <span v-if="sortedRisks.length > 1" class="badge badge-sm rounded-sm font-mono text-xs bg-black/40 border border-white/20 text-white/90">
                   警訊 #{{ idx + 1 }}
                 </span>
+
+                <!-- Target Callsign / Pair -->
                 <span class="text-base font-bold truncate font-mono text-white">
-                  {{ risk.droneACallsign }} <span class="text-rose-400 font-black">⚡</span> {{ risk.droneBCallsign }}
+                  <template v-if="risk.type === 'no-fly-zone'">
+                    {{ risk.droneACallsign }} <span class="text-rose-400 font-black">⚡</span> {{ risk.zoneName }}
+                  </template>
+                  <template v-else-if="risk.type === 'altitude-violation'">
+                    {{ risk.droneACallsign }} <span class="text-amber-400 font-black">⚡</span> {{ risk.zoneName }}
+                  </template>
+                  <template v-else>
+                    {{ risk.droneACallsign }} <span class="text-rose-400 font-black">⚡</span> {{ risk.droneBCallsign }}
+                  </template>
                 </span>
               </div>
             </div>
           </div>
 
-          <!-- Countdown & Distance Badges -->
-          <div class="flex items-center gap-2.5 flex-shrink-0">
-            <!-- CPA Countdown Badge -->
+          <!-- Dual Badges (Countdown / Metric 1 & Distance / Metric 2) -->
+          <div class="flex items-center gap-2 flex-shrink-0">
+            <!-- Metric 1 Badge -->
             <div
-              class="px-3 py-1.5 rounded-sm text-center font-mono"
+              class="px-2.5 py-1 rounded-sm text-center font-mono min-w-16"
               :class="risk.severity === 'critical' ? 'bg-rose-500 text-white' : 'bg-amber-500 text-amber-950'"
             >
-              <div class="text-xs uppercase font-bold opacity-80 leading-none">預估交會</div>
-              <div class="text-base font-black leading-tight mt-0.5">{{ risk.timeToCpaSeconds }}s</div>
+              <div class="text-[11px] uppercase font-bold opacity-85 leading-none">
+                {{ risk.metricPrimaryTitle || (risk.timeToCpaSeconds ? '預估交會' : '警戒狀態') }}
+              </div>
+              <div class="text-base font-black leading-tight mt-0.5">
+                {{ risk.metricPrimaryValue || (risk.timeToCpaSeconds ? `${risk.timeToCpaSeconds}s` : '越界') }}
+              </div>
             </div>
 
-            <!-- CPA Distance Badge -->
-            <div class="px-3 py-1.5 rounded-sm bg-black/60 text-center font-mono border border-white/20">
-              <div class="text-xs uppercase opacity-70 leading-none">最近距離</div>
-              <div class="text-base font-black text-cyan-300 leading-tight mt-0.5">{{ risk.cpaDistanceMeters }}m</div>
+            <!-- Metric 2 Badge -->
+            <div class="px-2.5 py-1 rounded-sm bg-black/60 text-center font-mono border border-white/20 min-w-16">
+              <div class="text-[11px] uppercase opacity-75 leading-none">
+                {{ risk.metricSecondaryTitle || '最近距離' }}
+              </div>
+              <div class="text-base font-black text-cyan-300 leading-tight mt-0.5">
+                {{ risk.metricSecondaryValue || (risk.cpaDistanceMeters ? `${risk.cpaDistanceMeters}m` : '禁航紅區') }}
+              </div>
             </div>
           </div>
         </div>
 
         <!-- Bottom bar: Real-time Recommended Maneuver / Advisory Action -->
         <div class="flex items-center justify-between gap-2.5 pt-2 border-t border-white/10 text-sm">
-          <div class="flex items-center gap-2 opacity-90 truncate">
+          <div class="flex items-center gap-2 opacity-95 truncate">
             <MaterialIcon name="shield" :size="16" class="text-emerald-400 flex-shrink-0" />
             <span class="truncate font-medium text-sm">{{ risk.advisoryText }}</span>
           </div>
           <div class="text-sm font-mono opacity-85 flex-shrink-0">
-            間距: {{ risk.currentDistanceMeters }}m | 高度差: {{ risk.altitudeDiffMeters }}m
+            <template v-if="risk.type === 'no-fly-zone'">
+              當前高度: {{ risk.currentAltitudeMeters }}m AGL | 法定標準: 禁航
+            </template>
+            <template v-else-if="risk.type === 'altitude-violation'">
+              當前高度: {{ risk.currentAltitudeMeters }}m | 法定上限: 60m AGL
+            </template>
+            <template v-else>
+              間距: {{ risk.currentDistanceMeters }}m | 高度差: {{ risk.altitudeDiffMeters }}m
+            </template>
           </div>
         </div>
       </div>

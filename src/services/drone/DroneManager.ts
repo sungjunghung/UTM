@@ -10,6 +10,7 @@ import { DroneEntity } from './DroneEntity'
 import type { DroneInfo, DroneManagerOptions } from './types'
 import type { CollisionRisk } from './collisionTypes'
 import { calculateCpaRisk } from './collisionService'
+import { checkAirspaceViolations } from './airspaceAlertService'
 import { createConflictPointStyle, createConflictVectorStyle } from './conflictStyles'
 
 export class DroneManager {
@@ -412,13 +413,14 @@ export class DroneManager {
     // Initialize all to clear
     entities.forEach((e) => alertMap.set(e.id, 'clear'))
 
-    // Pairwise calculation: O(N^2 / 2)
+    // 1. Pairwise CPA collision calculation: O(N^2 / 2)
     for (let i = 0; i < entities.length; i++) {
       for (let j = i + 1; j < entities.length; j++) {
         const a = entities[i]
         const b = entities[j]
         const risk = calculateCpaRisk(a, b, 30)
         if (risk) {
+          risk.type = 'collision'
           risks.push(risk)
 
           // Update drone alert severity to worst case
@@ -431,15 +433,26 @@ export class DroneManager {
       }
     }
 
-    // Apply alert status to drone entities for map halo & styling
+    // 2. Real-time Airspace Geofence & Altitude Violations (誤闖禁航區 / 誤觸限航區上限)
+    const airspaceAlerts = checkAirspaceViolations(entities)
+    airspaceAlerts.forEach((alert) => {
+      const rank = { clear: 0, advisory: 1, warning: 2, critical: 3 }
+      const cur = alertMap.get(alert.droneAId) || 'clear'
+      if (rank[alert.severity] > rank[cur]) {
+        alertMap.set(alert.droneAId, alert.severity)
+      }
+    })
+
+    // Apply worst-case alert status to drone entities for map halo & styling
     entities.forEach((e) => {
       const sev = alertMap.get(e.id) || 'clear'
       e.setAlertSeverity(sev)
     })
 
-    this.collisionRisks = risks
+    const allAlerts: CollisionRisk[] = [...risks, ...airspaceAlerts]
+    this.collisionRisks = allAlerts
     this.updateConflictLayerFeatures(risks)
-    this.collisionCallbacks.forEach((cb) => cb(risks))
+    this.collisionCallbacks.forEach((cb) => cb(allAlerts))
   }
 
   /**
@@ -449,6 +462,7 @@ export class DroneManager {
     this.conflictSource.clear()
 
     risks.forEach((risk) => {
+      if (!risk.droneBId) return
       const dA = this.droneMap.get(risk.droneAId)
       const dB = this.droneMap.get(risk.droneBId)
       if (!dA || !dB) return
@@ -476,7 +490,7 @@ export class DroneManager {
         geometry: new Point(posCpa),
       })
       pointFeature.setStyle(
-        createConflictPointStyle(risk.severity, risk.timeToCpaSeconds, risk.cpaDistanceMeters)
+        createConflictPointStyle(risk.severity, risk.timeToCpaSeconds ?? 0, risk.cpaDistanceMeters ?? 0)
       )
       this.conflictSource.addFeature(pointFeature)
     })
@@ -783,6 +797,165 @@ export class DroneManager {
           [121.075, 24.690],
           [121.066, 24.688],
           [121.068, 24.700],
+        ],
+        trail: [],
+        lastSeen: Date.now(),
+      },
+      {
+        id: 'UAV-SURVEY-10',
+        callsign: '寶山測繪10號',
+        remoteId: 'CAA-TW-501832',
+        model: 'DJI Matrice 300 RTK',
+        operator: '地籍測量資訊中心',
+        missionType: '寶山水資源高精地籍測繪 (循環示範：誤闖禁航區)',
+        status: '任務巡檢',
+        latitude: 24.750,
+        longitude: 121.026,
+        altitudeAglMeters: 72,
+        altitudeAglFeet: 236,
+        airspaceZone: 'green',
+        maxLegalAltitudeMeters: 120,
+        zoneName: '寶山非管制空域',
+        speedKmh: 42,
+        heading: 65,
+        verticalRateMps: 0,
+        batteryPercent: 84,
+        linkQuality: 97,
+        satellites: 26,
+        homeCoordinate: [121.026, 24.750],
+        // Autonomous continuous loop: enters CAA 寶山淨水廠 300m No-Fly Red Zone (121.0354, 24.7543), then exits and repeats
+        waypoints: [
+          [121.026, 24.750], // Outside Red Zone (compliant)
+          [121.0345, 24.7540], // Deep inside 寶山淨水廠 300m Red Zone (triggers 誤闖禁航區警報!)
+          [121.0370, 24.7555], // Inside Red Zone (alert active)
+          [121.0440, 24.7510], // Exits Red Zone (recovers, alert clears)
+          [121.0310, 24.7460], // Outside Red Zone
+        ],
+        trail: [],
+        lastSeen: Date.now(),
+      },
+      {
+        id: 'UAV-INSPECT-11',
+        callsign: '二重巡視11號',
+        remoteId: 'CAA-TW-672914',
+        model: 'Autel Alpha Enterprise',
+        operator: '竹科工程監造組',
+        missionType: '二三重都市計畫科技執法 (循環示範：限航區違規超高)',
+        status: '任務巡檢',
+        latitude: 24.766,
+        longitude: 121.042,
+        altitudeAglMeters: 48, // Compliant <= 60m
+        altitudeAglFeet: 157,
+        airspaceZone: 'yellow',
+        maxLegalAltitudeMeters: 60,
+        zoneName: '竹縣32 二三重限航區',
+        speedKmh: 38,
+        heading: 50,
+        verticalRateMps: 0,
+        batteryPercent: 79,
+        linkQuality: 94,
+        satellites: 24,
+        homeCoordinate: [121.042, 24.766],
+        // Autonomous continuous loop with dynamic 3D altitude: climbs up to 82m-85m in Yellow Zone (ceiling 60m), then descends to 45m and repeats
+        waypoints: [
+          [121.042, 24.766, 48], // Compliant <= 60m
+          [121.046, 24.772, 82], // Climbs to 82m! Exceeds Yellow Zone 60m limit by +22m (triggers 誤觸限航區上限警報!)
+          [121.051, 24.775, 85], // 85m (alert active)
+          [121.053, 24.769, 45], // Descends back to 45m (recovers <= 60m, alert clears!)
+          [121.044, 24.763, 48], // Compliant <= 60m
+        ],
+        trail: [],
+        lastSeen: Date.now(),
+      },
+      {
+        id: 'UAV-CARGO-12',
+        callsign: '竹科物流12號',
+        remoteId: 'CAA-TW-902341',
+        model: 'Flyby VTOL Express',
+        operator: '聯發科技物流隊',
+        missionType: '竹科半導體晶圓快速接駁走廊',
+        status: '巡航中',
+        latitude: 24.765,
+        longitude: 121.015,
+        altitudeAglMeters: 75,
+        altitudeAglFeet: 246,
+        airspaceZone: 'green',
+        maxLegalAltitudeMeters: 120,
+        zoneName: '寶山非管制空域',
+        speedKmh: 56,
+        heading: 105,
+        verticalRateMps: 0,
+        batteryPercent: 90,
+        linkQuality: 98,
+        satellites: 27,
+        homeCoordinate: [121.015, 24.765],
+        waypoints: [
+          [121.015, 24.765],
+          [121.028, 24.762],
+          [121.035, 24.758],
+          [121.020, 24.759],
+        ],
+        trail: [],
+        lastSeen: Date.now(),
+      },
+      {
+        id: 'UAV-RESCUE-13',
+        callsign: '水域搜救13號',
+        remoteId: 'CAA-TW-419820',
+        model: 'Thunder Tiger Sirius',
+        operator: '新竹縣水上救生協會',
+        missionType: '寶山第二水庫水域搜救演習',
+        status: '任務巡檢',
+        latitude: 24.722,
+        longitude: 121.058,
+        altitudeAglMeters: 68,
+        altitudeAglFeet: 223,
+        airspaceZone: 'green',
+        maxLegalAltitudeMeters: 120,
+        zoneName: '寶山非管制空域',
+        speedKmh: 46,
+        heading: 40,
+        verticalRateMps: 0,
+        batteryPercent: 88,
+        linkQuality: 96,
+        satellites: 25,
+        homeCoordinate: [121.058, 24.722],
+        waypoints: [
+          [121.058, 24.722],
+          [121.062, 24.726],
+          [121.056, 24.730],
+          [121.052, 24.724],
+        ],
+        trail: [],
+        lastSeen: Date.now(),
+      },
+      {
+        id: 'UAV-POWER-14',
+        callsign: '綠能風電14號',
+        remoteId: 'CAA-TW-330198',
+        model: 'Skydio X2D Enterprise',
+        operator: '離岸風電運維組',
+        missionType: '香山沿海離岸風場巡航稽查',
+        status: '任務巡檢',
+        latitude: 24.780,
+        longitude: 120.925,
+        altitudeAglMeters: 55,
+        altitudeAglFeet: 180,
+        airspaceZone: 'green',
+        maxLegalAltitudeMeters: 120,
+        zoneName: '香山沿海非管制空域',
+        speedKmh: 44,
+        heading: 30,
+        verticalRateMps: 0,
+        batteryPercent: 85,
+        linkQuality: 93,
+        satellites: 22,
+        homeCoordinate: [120.925, 24.780],
+        waypoints: [
+          [120.925, 24.780],
+          [120.932, 24.785],
+          [120.935, 24.778],
+          [120.922, 24.775],
         ],
         trail: [],
         lastSeen: Date.now(),

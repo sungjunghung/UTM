@@ -35,7 +35,7 @@ export interface DroneInfo {
   linkQuality: number // 0-100%
   satellites: number // GNSS sat count
   homeCoordinate: [number, number]
-  waypoints: [number, number][]
+  waypoints: ([number, number] | [number, number, number])[]
   trail: [number, number][]
   lastSeen: number
 }
