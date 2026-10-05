@@ -1,0 +1,5 @@
+@import "tailwindcss";
+@plugin "daisyui" {
+  themes: all;
+}
+@import "material-symbols/outlined.css";
