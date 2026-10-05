@@ -1,6 +1,7 @@
 import VectorLayer from 'ol/layer/Vector'
 import VectorSource from 'ol/source/Vector'
 import type OlMap from 'ol/Map'
+import MouseWheelZoom from 'ol/interaction/MouseWheelZoom'
 import { fromLonLat } from 'ol/proj'
 import { AircraftEntity } from './AircraftEntity'
 import type { AdsbResponse, AircraftInfo } from './types'
@@ -45,6 +46,7 @@ export class AircraftManager {
   // Callbacks
   private updateCallbacks: Set<(list: AircraftInfo[]) => void> = new Set()
   private selectCallbacks: Set<(info: AircraftInfo | null) => void> = new Set()
+  private followChangeCallbacks: Set<(following: boolean) => void> = new Set()
   private loadingCallbacks: Set<(loading: boolean) => void> = new Set()
   private errorCallbacks: Set<(err: string | null) => void> = new Set()
 
@@ -233,7 +235,15 @@ export class AircraftManager {
         const selectedEntity = this.aircraftMap.get(this.selectedHex)
         if (selectedEntity) {
           const view = this.map.getView()
-          view.setCenter(fromLonLat(selectedEntity.currentLonLat))
+
+          // 1. If user is manually dragging/panning the map, gracefully release follow lock
+          if (view.getInteracting()) {
+            this.setFollowSelected(false)
+          } else if (!view.getAnimating()) {
+            // 2. Only update center when NOT in the middle of a wheel zoom animation
+            // This allows mouse wheel zooming to execute completely smoothly!
+            view.setCenter(fromLonLat(selectedEntity.currentLonLat))
+          }
         }
       }
 
@@ -255,6 +265,11 @@ export class AircraftManager {
 
     this.selectedHex = hex
 
+    // If deselecting, release follow mode
+    if (!hex) {
+      this.setFollowSelected(false)
+    }
+
     // Select new
     let info: AircraftInfo | null = null
     if (hex && this.aircraftMap.has(hex)) {
@@ -275,11 +290,34 @@ export class AircraftManager {
   }
 
   public setFollowSelected(follow: boolean): void {
+    if (this.followSelected === follow) return
     this.followSelected = follow
+    this.notifyFollowChange(follow)
+    this.updateMouseWheelAnchor()
+  }
+
+  private updateMouseWheelAnchor(): void {
+    if (!this.map) return
+    this.map.getInteractions().forEach((interaction) => {
+      if (interaction instanceof MouseWheelZoom) {
+        // When following airplane, zoom centered on the airplane (useAnchor: false)
+        // When not following, zoom towards mouse cursor position (useAnchor: true)
+        interaction.setMouseAnchor(!this.followSelected)
+      }
+    })
   }
 
   public isFollowingSelected(): boolean {
     return this.followSelected
+  }
+
+  public onFollowChange(cb: (following: boolean) => void): () => void {
+    this.followChangeCallbacks.add(cb)
+    return () => this.followChangeCallbacks.delete(cb)
+  }
+
+  private notifyFollowChange(following: boolean): void {
+    this.followChangeCallbacks.forEach((cb) => cb(following))
   }
 
   public toggleTrails(show: boolean): void {

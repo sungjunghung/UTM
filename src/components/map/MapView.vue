@@ -80,6 +80,10 @@ onMounted(() => {
       isAircraftLoading.value = loading
     })
 
+    aircraftManager.onFollowChange((following) => {
+      isFollowingFlight.value = following
+    })
+
     aircraftManager.onError((err) => {
       aircraftError.value = err
     })
@@ -146,9 +150,10 @@ function handleCloseDetail() {
 }
 
 function handleToggleFollow() {
-  isFollowingFlight.value = !isFollowingFlight.value
-  aircraftManager?.setFollowSelected(isFollowingFlight.value)
-  showToast(isFollowingFlight.value ? '已開啟視角鎖定追蹤' : '已關閉視角鎖定')
+  const next = !isFollowingFlight.value
+  isFollowingFlight.value = next
+  aircraftManager?.setFollowSelected(next)
+  showToast(next ? '已開啟視角鎖定追蹤（可隨時滾輪縮放）' : '已關閉視角鎖定')
 }
 
 function handleToggleTrails() {
