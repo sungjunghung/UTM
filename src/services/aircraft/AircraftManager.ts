@@ -7,6 +7,7 @@ import { unByKey } from 'ol/Observable'
 import type { EventsKey } from 'ol/events'
 import { AircraftEntity } from './AircraftEntity'
 import type { AdsbResponse, AircraftInfo } from './types'
+import { apiUrl } from '../apiBase'
 
 export interface AircraftManagerOptions {
   centerLat?: number
@@ -30,6 +31,9 @@ export class AircraftManager {
 
   private projectionSource: VectorSource = new VectorSource()
   private projectionLayer: VectorLayer<VectorSource>
+
+  private routeSource: VectorSource = new VectorSource()
+  private routeLayer: VectorLayer<VectorSource>
 
   // Configuration
   private centerLat: number
@@ -71,6 +75,11 @@ export class AircraftManager {
     this.autoStart = options.autoStart ?? true
 
     // Initialize layers
+    this.routeLayer = new VectorLayer({
+      source: this.routeSource,
+      zIndex: 12,
+    })
+
     this.trailLayer = new VectorLayer({
       source: this.trailSource,
       zIndex: 15,
@@ -93,6 +102,7 @@ export class AircraftManager {
    */
   public attachToMap(map: OlMap): void {
     this.map = map
+    this.map.addLayer(this.routeLayer)
     this.map.addLayer(this.trailLayer)
     this.map.addLayer(this.projectionLayer)
     this.map.addLayer(this.planeLayer)
@@ -229,7 +239,7 @@ export class AircraftManager {
     this.notifyLoading(true)
 
     try {
-      const endpoint = `/api/adsb/v2/point/${this.centerLat}/${this.centerLon}/${this.radiusNm}`
+      const endpoint = apiUrl(`/api/adsb/v2/point/${this.centerLat}/${this.centerLon}/${this.radiusNm}`)
       const response = await fetch(endpoint)
       if (response.status === 429) {
         this.cooldownUntil = Date.now() + 5000
@@ -364,6 +374,8 @@ export class AircraftManager {
 
     // Select new
     let info: AircraftInfo | null = null
+    this.routeSource.clear()
+
     if (hex && this.aircraftMap.has(hex)) {
       const entity = this.aircraftMap.get(hex)!
       entity.setSelected(true)
@@ -376,6 +388,8 @@ export class AircraftManager {
           duration: 400,
         })
       }
+
+      // Route corridor removed as requested
     }
 
     this.notifySelect(info)
@@ -430,6 +444,10 @@ export class AircraftManager {
     this.planeLayer.setVisible(visible)
     this.trailLayer.setVisible(visible && this.showTrails)
     this.projectionLayer.setVisible(visible)
+    this.routeLayer.setVisible(visible)
+    if (!visible) {
+      this.routeSource.clear()
+    }
   }
 
   /**
@@ -578,12 +596,14 @@ export class AircraftManager {
       this.map.removeLayer(this.planeLayer)
       this.map.removeLayer(this.projectionLayer)
       this.map.removeLayer(this.trailLayer)
+      this.map.removeLayer(this.routeLayer)
       this.map = null
     }
 
     this.planeSource.clear()
     this.projectionSource.clear()
     this.trailSource.clear()
+    this.routeSource.clear()
     this.aircraftMap.clear()
     this.visibleHexes.clear()
   }

@@ -5,7 +5,7 @@ import { fromLonLat, toLonLat } from 'ol/proj'
 import { defaults as defaultControls, ScaleLine } from 'ol/control'
 import { LayerManager } from './LayerManager'
 import { MarkerManager } from './MarkerManager'
-import type { BaseLayerType, MapManagerOptions, MarkerOptions } from './types'
+import type { BaseLayerType, CartoTone, MapManagerOptions, MarkerOptions } from './types'
 
 export class MapManager {
   private map: Map | null = null
@@ -29,7 +29,7 @@ export class MapManager {
     this.minZoom = options.minZoom ?? 2
     this.maxZoom = options.maxZoom ?? 20
 
-    this.layerManager = new LayerManager(options.baseLayer || 'osm')
+    this.layerManager = new LayerManager(options.baseLayer || 'osm', options.cartoTone ?? 'light')
     this.markerManager = new MarkerManager()
   }
 
@@ -213,6 +213,10 @@ export class MapManager {
 
   public switchBaseLayer(type: BaseLayerType): void {
     this.layerManager.switchBaseLayer(type)
+  }
+
+  public setCartoTone(tone: CartoTone): void {
+    this.layerManager.setCartoTone(tone)
   }
 
   public getActiveBaseLayer(): BaseLayerType {

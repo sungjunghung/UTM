@@ -3,7 +3,7 @@ import { ref, onMounted, onUnmounted } from 'vue'
 import Overlay from 'ol/Overlay'
 import { fromLonLat } from 'ol/proj'
 import { MapManager } from '../../services/map/MapManager'
-import type { BaseLayerType } from '../../services/map/types'
+import type { BaseLayerType, CartoTone } from '../../services/map/types'
 import { AircraftManager } from '../../services/aircraft/AircraftManager'
 import type { AircraftInfo } from '../../services/aircraft/types'
 import { DroneManager } from '../../services/drone/DroneManager'
@@ -34,9 +34,12 @@ let airspaceManager: AirspaceManager | null = null
 let detailOverlay: Overlay | null = null
 let droneOverlay: Overlay | null = null
 let airspaceOverlay: Overlay | null = null
+let threatZoneClickHandled = false
 
 // Reactive state
-const activeLayer = ref<BaseLayerType>('osm-dark')
+const activeLayer = ref<BaseLayerType>('carto')
+const CARTO_TONE_STORAGE_KEY = 'utm:carto-tone'
+const cartoTone = ref<CartoTone>(loadCartoTone())
 const mouseCoord = ref<[number, number] | null>(null)
 const centerCoord = ref<[number, number]>([120.982, 23.838])
 const currentZoom = ref(8)
@@ -87,6 +90,7 @@ onMounted(() => {
     center: [120.982, 23.838],
     zoom: 8,
     baseLayer: activeLayer.value,
+    cartoTone: cartoTone.value,
   })
 
   // Initialize onto target DOM element
@@ -96,9 +100,9 @@ onMounted(() => {
   const olMap = mapManager.getMap()
   if (olMap) {
     aircraftManager = new AircraftManager({
-      centerLat: 24.7887,
-      centerLon: 121.0028,
-      radiusNm: 120,
+      centerLat: 23.8, // Center of Taiwan
+      centerLon: 121.0,
+      radiusNm: 250, // Expand coverage to 250nm (entire Taiwan FIR and offshore corridors)
       pollIntervalMs: 3000,
       showTrails: showTrails.value,
       autoStart: false, // 航班預設關閉，開啟才取資訊
@@ -221,6 +225,13 @@ onMounted(() => {
       collisionRisks.value = risks
     })
 
+    // Clicking a highlighted threat zone (違規警示空域) opens the same airspace detail card
+    droneManager.onZoneSelect((zone) => {
+      threatZoneClickHandled = !!zone
+      if (threatZoneClickHandled) queueMicrotask(() => (threatZoneClickHandled = false))
+      showAirspaceDetail(zone)
+    })
+
     // 4. Instantiate OOP AirspaceManager for CAA Drone No-Fly & Restricted Zones
     airspaceManager = new AirspaceManager(showAirspace.value)
     airspaceManager.attachToMap(olMap)
@@ -240,12 +251,9 @@ onMounted(() => {
     })
 
     airspaceManager.onSelect((zone) => {
-      selectedAirspace.value = zone
-      if (zone && zone.coordinate && airspaceOverlay) {
-        airspaceOverlay.setPosition(fromLonLat(zone.coordinate))
-      } else if (!zone && airspaceOverlay) {
-        airspaceOverlay.setPosition(undefined)
-      }
+      // Same click already opened a threat-zone card: don't let the CAA layer's "missed" close it
+      if (!zone && threatZoneClickHandled) return
+      showAirspaceDetail(zone)
     })
   }
 
@@ -418,6 +426,15 @@ function handleToggleAirspace() {
   }
 }
 
+function showAirspaceDetail(zone: AirspaceZoneInfo | null) {
+  selectedAirspace.value = zone
+  if (zone && zone.coordinate && airspaceOverlay) {
+    airspaceOverlay.setPosition(fromLonLat(zone.coordinate))
+  } else if (!zone && airspaceOverlay) {
+    airspaceOverlay.setPosition(undefined)
+  }
+}
+
 function handleCloseAirspaceDetail() {
   selectedAirspace.value = null
   if (airspaceOverlay) {
@@ -457,6 +474,25 @@ function handleSwitchBaseLayer(type: BaseLayerType) {
   showToast(type === 'satellite' ? '已切換為衛星空照圖' : '已切換為標準地圖')
 }
 
+function handleUpdateCartoTone(tone: CartoTone) {
+  cartoTone.value = tone
+  mapManager?.setCartoTone(tone)
+  try {
+    localStorage.setItem(CARTO_TONE_STORAGE_KEY, tone)
+  } catch {
+    // Storage unavailable (private mode etc.): tone just won't persist
+  }
+}
+
+function loadCartoTone(): CartoTone {
+  try {
+    const stored = localStorage.getItem(CARTO_TONE_STORAGE_KEY)
+    return stored === 'light' || stored === 'gray' || stored === 'dark' ? stored : 'dark'
+  } catch {
+    return 'dark'
+  }
+}
+
 let toastTimer: ReturnType<typeof setTimeout> | null = null
 function showToast(msg: string) {
   clickToast.value = msg
@@ -480,7 +516,8 @@ function showToast(msg: string) {
     <div class="header-glass-backdrop"></div>
 
     <!-- Floating Top Navigation Bar with UTM Title & Radar Tracking Widget -->
-    <header class="absolute top-4 left-4 right-4 z-30 pointer-events-none">
+    <!-- z-45: above the alert stack (z-40) so header dropdowns (theme picker, widget menus) aren't covered -->
+    <header class="absolute top-4 left-4 right-4 z-45 pointer-events-none">
       <div class="flex items-start justify-between">
         <!-- Brand Title & Radar/Drone Widgets: Pure Borderless Glass UTM Text + Aircraft & Drone tracking -->
         <div class="pointer-events-auto flex items-start gap-2.5 flex-wrap">
@@ -586,7 +623,9 @@ function showToast(msg: string) {
     <div class="absolute bottom-4 left-4 z-20 pointer-events-auto select-none">
       <MapLayerSwitcher
         :current-layer="activeLayer"
+        :tone="cartoTone"
         @switch-layer="handleSwitchBaseLayer"
+        @update:tone="handleUpdateCartoTone"
       />
     </div>
 

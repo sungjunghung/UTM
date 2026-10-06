@@ -1,14 +1,29 @@
 import TileLayer from 'ol/layer/Tile'
+import LayerGroup from 'ol/layer/Group'
+import type BaseLayer from 'ol/layer/Base'
 import OSM from 'ol/source/OSM'
 import XYZ from 'ol/source/XYZ'
-import type { BaseLayerType } from './types'
+import type { BaseLayerType, CartoTone } from './types'
+
+// CARTO Basemaps 需 API Key (免費申請: https://carto.com/basemaps/apikey)，設定於 .env.local 的 VITE_CARTO_API_KEY
+const CARTO_API_KEY = import.meta.env.VITE_CARTO_API_KEY as string | undefined
+const CARTO_ATTRIBUTION = '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>, &copy; <a href="https://carto.com/attributions">CARTO</a>'
+
+function cartoTileUrl(style: string): string {
+  const base = `https://basemaps.cartocdn.com/rastertiles/${style}/{z}/{x}/{y}{r}.png`
+  return CARTO_API_KEY ? `${base}?key=${encodeURIComponent(CARTO_API_KEY)}` : base
+}
 
 export class LayerManager {
-  private baseLayers: Map<BaseLayerType, TileLayer<OSM | XYZ>> = new Map()
+  private baseLayers: Map<BaseLayerType, BaseLayer> = new Map()
   private currentType: BaseLayerType = 'osm-dark'
 
-  constructor(defaultType: BaseLayerType = 'osm-dark') {
+  private cartoTone: CartoTone = 'light'
+  private cartoToneLayers: Record<CartoTone, TileLayer<XYZ>> | null = null
+
+  constructor(defaultType: BaseLayerType = 'osm-dark', cartoTone: CartoTone = 'light') {
     this.currentType = defaultType
+    this.cartoTone = cartoTone
     this.initBaseLayers()
   }
 
@@ -21,25 +36,34 @@ export class LayerManager {
     })
     this.baseLayers.set('osm', osmLayer)
 
-    // 2. CartoDB Positron (Light)
-    const cartoLightLayer = new TileLayer({
-      source: new XYZ({
-        url: 'https://{a-d}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
-        attributions: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>, &copy; <a href="https://carto.com/attributions">CARTO</a>',
+    // 2. CARTO 三段色調底圖：淺色 Positron / 灰色 (Positron 降亮度濾鏡) / 深色 Dark Matter
+    //    灰色不用淺深兩圖交疊：兩圖明暗相反，疊 50% 會互相抵消成一片灰、道路與文字都糊掉
+    const cartoLightSource = new XYZ({ url: cartoTileUrl('light_all'), attributions: CARTO_ATTRIBUTION })
+    this.cartoToneLayers = {
+      light: new TileLayer({ source: cartoLightSource }),
+      // 與淺色共用同一 source (圖磚只抓一次)；獨立 className 讓 CSS 濾鏡只作用在這一層
+      gray: new TileLayer({ source: cartoLightSource, className: 'ol-carto-gray-tiles' }),
+      dark: new TileLayer({
+        source: new XYZ({ url: cartoTileUrl('dark_all'), attributions: CARTO_ATTRIBUTION }),
+        className: 'ol-carto-dark-tiles',
       }),
-      visible: this.currentType === 'carto-light',
-      properties: { title: 'Carto Light', type: 'carto-light' },
+    }
+    const cartoGroup = new LayerGroup({
+      layers: Object.values(this.cartoToneLayers),
+      visible: this.currentType === 'carto',
+      properties: { title: 'Carto', type: 'carto' },
     })
-    this.baseLayers.set('carto-light', cartoLightLayer)
+    this.applyCartoTone()
+    this.baseLayers.set('carto', cartoGroup)
 
-    // 3. CartoDB Dark Matter
+    // 3. CartoDB Dark Matter (Ultra-clean, No-Labels radar baseline)
     const cartoDarkLayer = new TileLayer({
       source: new XYZ({
-        url: 'https://{a-d}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
-        attributions: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>, &copy; <a href="https://carto.com/attributions">CARTO</a>',
+        url: cartoTileUrl('dark_nolabels'),
+        attributions: CARTO_ATTRIBUTION,
       }),
       visible: this.currentType === 'carto-dark',
-      properties: { title: 'Carto Dark', type: 'carto-dark' },
+      properties: { title: '極簡暗夜雷達 (無雜訊)', type: 'carto-dark' },
     })
     this.baseLayers.set('carto-dark', cartoDarkLayer)
 
@@ -55,7 +79,7 @@ export class LayerManager {
     })
     this.baseLayers.set('opentopo', topoLayer)
 
-    // 5. 臺灣通用電子地圖 - 灰階版 (內政部國土測繪中心 NLSC 政府公開開放資料, 100% 免 API Key)
+    // 5. 臺灣通用電子地圖 - 灰階版 (內政部國土測繪中心 NLSC, 100% 免 API Key, 專注台灣無外地雜訊)
     const nlscGrayLayer = new TileLayer({
       source: new XYZ({
         url: 'https://wmts.nlsc.gov.tw/wmts/EMAP01/default/GoogleMapsCompatible/{z}/{y}/{x}',
@@ -89,8 +113,24 @@ export class LayerManager {
     this.baseLayers.set('satellite', satelliteLayer)
   }
 
-  public getLayersArray(): TileLayer<OSM | XYZ>[] {
+  public getLayersArray(): BaseLayer[] {
     return Array.from(this.baseLayers.values())
+  }
+
+  public setCartoTone(tone: CartoTone): void {
+    this.cartoTone = tone
+    this.applyCartoTone()
+  }
+
+  public getCartoTone(): CartoTone {
+    return this.cartoTone
+  }
+
+  private applyCartoTone(): void {
+    if (!this.cartoToneLayers) return
+    for (const [tone, layer] of Object.entries(this.cartoToneLayers)) {
+      layer.setVisible(tone === this.cartoTone)
+    }
   }
 
   public switchBaseLayer(type: BaseLayerType): void {

@@ -55,6 +55,10 @@ const airline = computed(() => {
 const routeInfo = ref<RouteInfo | null>(null)
 const aircraftDetails = ref<AircraftDetails | null>(null)
 const isRouteLoading = ref(false)
+const isCollapsed = ref(true)
+function toggleCollapse() {
+  isCollapsed.value = !isCollapsed.value
+}
 
 watch(
   () => props.aircraft?.flight,
@@ -144,59 +148,97 @@ watch(
           </div>
         </div>
 
-        <button
-          class="btn btn-sm btn-square rounded-sm btn-ghost text-white/80 hover:text-white hover:bg-white/20 z-10 shrink-0 ml-1"
-          title="關閉"
-          @click="emit('close')"
-        >
-          <MaterialIcon name="close" :size="18" />
-        </button>
+        <div class="flex items-center gap-0.5 z-10 shrink-0 ml-1">
+          <button
+            class="btn btn-sm btn-square rounded-sm btn-ghost text-white/80 hover:text-white hover:bg-white/20"
+            :title="isCollapsed ? '展開詳細儀表資訊' : '縮小為精簡狀態列'"
+            @click="toggleCollapse"
+          >
+            <MaterialIcon :name="isCollapsed ? 'expand_more' : 'expand_less'" :size="18" />
+          </button>
+          <button
+            class="btn btn-sm btn-square rounded-sm btn-ghost text-white/80 hover:text-white hover:bg-white/20"
+            title="關閉"
+            @click="emit('close')"
+          >
+            <MaterialIcon name="close" :size="18" />
+          </button>
+        </div>
       </div>
 
-      <!-- Route Banner (Origin -> Destination) if resolved -->
-      <div v-if="routeInfo" class="px-4 py-2.5 bg-slate-800/80 border-b border-slate-700/60 text-sm">
-        <div class="flex items-center justify-between">
-          <!-- Departure Airport -->
-          <div class="flex-1 min-w-0">
-            <div class="flex items-center gap-1.5">
-              <span class="text-base font-black font-mono text-sky-400 tracking-wider">
-                {{ routeInfo.origin.iata }}
-              </span>
-              <span class="text-xs text-slate-400 font-mono">({{ routeInfo.origin.icao }})</span>
-            </div>
-            <div class="text-sm text-slate-200 font-medium truncate" :title="routeInfo.origin.name">
-              {{ routeInfo.origin.city || routeInfo.origin.name }}
-            </div>
-          </div>
+      <!-- Compact Mode Bar (Shown only when collapsed): Minimal footprint so map is not obscured -->
+      <div
+        v-if="isCollapsed"
+        class="px-3 py-1.5 bg-slate-900/90 flex items-center justify-between text-xs font-mono text-slate-300 border-t border-sky-500/20 cursor-pointer hover:bg-slate-800/80 transition-colors"
+        @click="toggleCollapse"
+      >
+        <div class="flex items-center gap-3">
+          <span class="flex items-center gap-1">
+            <span class="text-sky-400 font-bold">ALT</span>
+            <span class="text-white">{{ aircraft.altitude.toLocaleString() }}ft</span>
+          </span>
+          <span class="flex items-center gap-1">
+            <span class="text-amber-400 font-bold">SPD</span>
+            <span class="text-white">{{ aircraft.speed }}kts</span>
+          </span>
+          <span class="flex items-center gap-1">
+            <span class="text-cyan-400 font-bold">HDG</span>
+            <span class="text-white">{{ aircraft.heading.toFixed(0) }}°</span>
+          </span>
+        </div>
+        <div class="flex items-center gap-1 text-[11px] text-sky-400/80">
+          <span>展開</span>
+          <MaterialIcon name="unfold_more" :size="14" />
+        </div>
+      </div>
 
-          <!-- Middle Flight Arrow -->
-          <div class="px-2.5 flex flex-col items-center shrink-0">
-            <MaterialIcon name="flight_takeoff" :size="18" class="text-sky-400" />
-            <span class="text-xs font-mono text-slate-400">直飛</span>
-          </div>
+      <!-- Full Body: Collapsible container -->
+      <div v-show="!isCollapsed">
 
-          <!-- Destination Airport -->
-          <div class="flex-1 min-w-0 text-right">
-            <div class="flex items-center justify-end gap-1.5">
-              <span class="text-xs text-slate-400 font-mono">({{ routeInfo.destination.icao }})</span>
-              <span class="text-base font-black font-mono text-emerald-400 tracking-wider">
-                {{ routeInfo.destination.iata }}
-              </span>
+        <!-- Route Banner (Origin -> Destination) if resolved -->
+        <div v-if="routeInfo" class="px-4 py-2.5 bg-slate-800/80 border-b border-slate-700/60 text-sm">
+          <div class="flex items-center justify-between">
+            <!-- Departure Airport -->
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-1.5">
+                <span class="text-base font-black font-mono text-sky-400 tracking-wider">
+                  {{ routeInfo.origin.iata }}
+                </span>
+                <span class="text-xs text-slate-400 font-mono">({{ routeInfo.origin.icao }})</span>
+              </div>
+              <div class="text-sm text-slate-200 font-medium truncate" :title="routeInfo.origin.name">
+                {{ routeInfo.origin.city || routeInfo.origin.name }}
+              </div>
             </div>
-            <div class="text-sm text-slate-200 font-medium truncate" :title="routeInfo.destination.name">
-              {{ routeInfo.destination.city || routeInfo.destination.name }}
+
+            <!-- Middle Flight Arrow -->
+            <div class="px-2.5 flex flex-col items-center shrink-0">
+              <MaterialIcon name="flight_takeoff" :size="18" class="text-sky-400" />
+              <span class="text-xs font-mono text-slate-400">直飛</span>
+            </div>
+
+            <!-- Destination Airport -->
+            <div class="flex-1 min-w-0 text-right">
+              <div class="flex items-center justify-end gap-1.5">
+                <span class="text-xs text-slate-400 font-mono">({{ routeInfo.destination.icao }})</span>
+                <span class="text-base font-black font-mono text-emerald-400 tracking-wider">
+                  {{ routeInfo.destination.iata }}
+                </span>
+              </div>
+              <div class="text-sm text-slate-200 font-medium truncate" :title="routeInfo.destination.name">
+                {{ routeInfo.destination.city || routeInfo.destination.name }}
+              </div>
             </div>
           </div>
         </div>
-      </div>
-      <!-- Route Loading Placeholder -->
-      <div v-else-if="isRouteLoading" class="px-4 py-2 bg-slate-800/50 border-b border-slate-700/40 text-sm text-slate-400 flex items-center gap-2 animate-pulse">
-        <MaterialIcon name="sync" :size="16" class="animate-spin text-sky-400" />
-        <span>正在查詢全球航線庫起迄站...</span>
-      </div>
+        <!-- Route Loading Placeholder -->
+        <div v-else-if="isRouteLoading" class="px-4 py-2 bg-slate-800/50 border-b border-slate-700/40 text-sm text-slate-400 flex items-center gap-2 animate-pulse">
+          <MaterialIcon name="sync" :size="16" class="animate-spin text-sky-400" />
+          <span>正在比對全球飛航時刻表...</span>
+        </div>
 
-      <!-- Quick Telemetry Grid (2x2) -->
-      <div class="p-3.5 space-y-2.5 text-sm bg-slate-900/60">
+        <!-- Quick Telemetry Grid (2x2) -->
+        <div class="p-3.5 space-y-2.5 text-sm bg-slate-900/60">
         <div class="grid grid-cols-2 gap-2.5">
           <!-- Altitude (Fixed Height, Tabular Numerals) -->
           <div class="p-2.5 rounded-lg bg-slate-800/80 border border-slate-700/70 h-[86px] flex flex-col justify-between">
@@ -292,6 +334,7 @@ watch(
             <span>{{ isFollowing ? '視角鎖定中（點擊解除）' : '鎖定鏡頭跟隨飛機' }}</span>
           </button>
         </div>
+      </div>
       </div>
     </div>
   </div>

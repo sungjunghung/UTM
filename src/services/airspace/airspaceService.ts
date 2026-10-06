@@ -1,4 +1,5 @@
 import type { AirspaceGeoJsonCollection } from './types'
+import { apiUrl } from '../apiBase'
 
 /**
  * Spatial query to Civil Aeronautics Administration (CAA) Drone GIS FeatureServer
@@ -29,7 +30,7 @@ export async function queryCaaAirspaceGeoJson(
 
   // 1. Try local proxy endpoint first (avoids CORS and adds server caching)
   try {
-    const res = await fetch(`/api/caa/query?${params.toString()}`, {
+    const res = await fetch(apiUrl(`/api/caa/query?${params.toString()}`), {
       headers: { Accept: 'application/json' },
     })
     if (res.ok) {

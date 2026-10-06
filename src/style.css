@@ -80,10 +80,22 @@ body,
   -webkit-mask-composite: destination-in;
 }
 
-/* OpenStreetMap Client-side Dark Radar Mode (100% Open Source & Zero API Key) */
+/* OpenStreetMap Client-side Dark Radar Mode (100% Free, Zero API Key) */
 .ol-dark-tiles {
-  filter: invert(100%) hue-rotate(180deg) brightness(85%) contrast(110%) saturate(30%);
+  filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%);
 }
+
+/* CARTO 灰色底圖：Positron 降亮度，保留道路/標籤明暗關係，上層航空器與無人機資訊仍清楚 */
+.ol-carto-gray-tiles {
+  filter: brightness(78%) contrast(105%);
+}
+
+/* CARTO 深色底圖：Dark Matter 原色接近純黑，提亮成石板藍灰 (呼應介面 slate 色系)，道路/地名與上層資訊更清楚 */
+.ol-carto-dark-tiles {
+  filter: brightness(180%) contrast(85%) sepia(35%) hue-rotate(175deg) saturate(160%);
+}
+
+
 
 /* Borderless Crystal Glass Typography (High Clarity & Opacity) */
 .glass-brand-text {

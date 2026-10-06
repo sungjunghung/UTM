@@ -4,7 +4,7 @@ import VectorSource from 'ol/source/Vector'
 import Feature from 'ol/Feature'
 import Point from 'ol/geom/Point'
 import LineString from 'ol/geom/LineString'
-import { fromLonLat } from 'ol/proj'
+import { fromLonLat, toLonLat } from 'ol/proj'
 import type { EventsKey } from 'ol/events'
 import { DroneEntity } from './DroneEntity'
 import type { DroneInfo, DroneManagerOptions } from './types'
@@ -17,7 +17,9 @@ import {
   createThreatZoneStyles,
   createThreatConnectorStyle,
 } from './conflictStyles'
-import { getRealCaaZoneGeometry } from '../airspace/monitoredAirspacePolygons'
+import { getRealCaaZoneGeometry, getRealCaaZoneProperties } from '../airspace/monitoredAirspacePolygons'
+import { buildAirspaceZoneInfo } from '../airspace/zoneInfo'
+import type { AirspaceZoneInfo } from '../airspace/types'
 
 export class DroneManager {
   private map: OlMap | null = null
@@ -54,6 +56,7 @@ export class DroneManager {
   private selectedMoveCallbacks: Set<(lonLat: [number, number], info: DroneInfo) => void> = new Set()
   private followChangeCallbacks: Set<(following: boolean) => void> = new Set()
   private collisionCallbacks: Set<(risks: CollisionRisk[]) => void> = new Set()
+  private zoneSelectCallbacks: Set<(info: AirspaceZoneInfo | null) => void> = new Set()
 
   constructor(options: DroneManagerOptions = {}) {
     this.threatZoneLayer = new VectorLayer({
@@ -94,9 +97,10 @@ export class DroneManager {
     this.map.addLayer(this.conflictLayer)
     this.map.addLayer(this.droneLayer)
 
-    // Single click on drone
+    // Single click on drone (priority) or on a highlighted threat zone (違規警示空域)
     this.singleClickKey = this.map.on('singleclick', (evt) => {
       let clickedId: string | null = null
+      let clickedZoneProps: Record<string, any> | null = null
       this.map?.forEachFeatureAtPixel(
         evt.pixel,
         (feature, layer) => {
@@ -106,6 +110,8 @@ export class DroneManager {
               clickedId = id
               return true
             }
+          } else if (layer === this.threatZoneLayer && !clickedZoneProps) {
+            clickedZoneProps = feature.get('zoneProps') || null
           }
         },
         { hitTolerance: 10 }
@@ -114,6 +120,12 @@ export class DroneManager {
       if (clickedId) {
         this.selectDrone(clickedId)
       }
+
+      const zoneInfo =
+        !clickedId && clickedZoneProps
+          ? buildAirspaceZoneInfo(clickedZoneProps, toLonLat(evt.coordinate) as [number, number])
+          : null
+      this.zoneSelectCallbacks.forEach((cb) => cb(zoneInfo))
     })
 
     // Pointer move over drone for visual hover
@@ -193,6 +205,7 @@ export class DroneManager {
     this.selectedMoveCallbacks.clear()
     this.followChangeCallbacks.clear()
     this.collisionCallbacks.clear()
+    this.zoneSelectCallbacks.clear()
   }
 
   public selectDrone(id: string | null): void {
@@ -240,6 +253,12 @@ export class DroneManager {
   public onSelect(cb: (info: DroneInfo | null) => void): () => void {
     this.selectCallbacks.add(cb)
     return () => this.selectCallbacks.delete(cb)
+  }
+
+  /** Fired on every map click: zone info when a highlighted threat zone is clicked, otherwise null */
+  public onZoneSelect(cb: (info: AirspaceZoneInfo | null) => void): () => void {
+    this.zoneSelectCallbacks.add(cb)
+    return () => this.zoneSelectCallbacks.delete(cb)
   }
 
   public onSelectedMove(cb: (lonLat: [number, number], info: DroneInfo) => void): () => void {
@@ -546,14 +565,18 @@ export class DroneManager {
         // 1. Retrieve the EXACT Civil Aeronautics Administration (CAA) Polygon Geometry
         // 不是畫圈圈，直接呈現真實法定禁限航區多邊形！
         let zoneGeom = getRealCaaZoneGeometry(alert.zoneName || '')
+        let zoneProps = getRealCaaZoneProperties(alert.zoneName || '')
         if (!zoneGeom && alert.id) {
           zoneGeom = getRealCaaZoneGeometry(alert.id)
+          zoneProps = getRealCaaZoneProperties(alert.id)
         }
 
         if (zoneGeom) {
           const zoneFeature = new Feature({
             geometry: zoneGeom,
             id: `threat-zone-${alert.id}`,
+            // Raw CAA attributes so clicking the highlighted zone opens the airspace detail card
+            zoneProps: zoneProps ?? { 空域名稱: alert.zoneName, 限制區: alert.type === 'no-fly-zone' ? '紅區' : '黃區' },
           })
           zoneFeature.setStyle(createThreatZoneStyles(alert))
           this.threatZoneSource.addFeature(zoneFeature)

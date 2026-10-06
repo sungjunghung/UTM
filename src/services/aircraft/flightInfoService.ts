@@ -3,6 +3,7 @@
  * Provides airline identification, route (origin -> destination) resolution,
  * and aircraft manufacturer details without requiring any API keys.
  */
+import { apiUrl } from '../apiBase'
 
 export interface AirlineInfo {
   code: string
@@ -16,6 +17,7 @@ export interface AirportInfo {
   iata: string
   name: string
   city: string
+  coordinate?: [number, number] // [lon, lat]
 }
 
 export interface RouteInfo {
@@ -114,94 +116,94 @@ const AIRLINE_DATABASE: Record<string, { nameZh: string; nameEn: string; country
   ANZ: { nameZh: '紐西蘭航空', nameEn: 'Air New Zealand', country: '紐西蘭' },
 }
 
-// Built-in high-speed airport lookup table (0ms)
-const AIRPORT_DATABASE: Record<string, { iata: string; name: string; city: string }> = {
+// Built-in high-speed airport lookup table with WGS84 coordinates (0ms)
+const AIRPORT_DATABASE: Record<string, { iata: string; name: string; city: string; coordinate: [number, number] }> = {
   // Taiwan
-  RCTP: { iata: 'TPE', name: '台北桃園國際機場', city: '台北/桃園' },
-  RCSS: { iata: 'TSA', name: '台北松山機場', city: '台北' },
-  RCKH: { iata: 'KHH', name: '高雄國際機場', city: '高雄' },
-  RCMQ: { iata: 'RMQ', name: '台中國際機場', city: '台中' },
-  RCQC: { iata: 'MZG', name: '澎湖馬公機場', city: '澎湖' },
-  RCBS: { iata: 'KNH', name: '金門尚義機場', city: '金門' },
-  RCFG: { iata: 'LZN', name: '馬祖南竿機場', city: '馬祖' },
-  RCFS: { iata: 'MFK', name: '馬祖北竿機場', city: '馬祖' },
-  RCFN: { iata: 'TTT', name: '台東機場', city: '台東' },
-  RCKU: { iata: 'CYI', name: '嘉義機場', city: '嘉義' },
-  RCNN: { iata: 'TNN', name: '台南機場', city: '台南' },
-  RCKW: { iata: 'HCN', name: '恆春機場', city: '恆春' },
-  RCPO: { iata: 'HCN', name: '新竹空軍基地', city: '新竹' },
+  RCTP: { iata: 'TPE', name: '台北桃園國際機場', city: '台北/桃園', coordinate: [121.233, 25.0777] },
+  RCSS: { iata: 'TSA', name: '台北松山機場', city: '台北', coordinate: [121.552, 25.0697] },
+  RCKH: { iata: 'KHH', name: '高雄國際機場', city: '高雄', coordinate: [120.350, 22.5771] },
+  RCMQ: { iata: 'RMQ', name: '台中國際機場', city: '台中', coordinate: [120.621, 24.2647] },
+  RCQC: { iata: 'MZG', name: '澎湖馬公機場', city: '澎湖', coordinate: [119.629, 23.5678] },
+  RCBS: { iata: 'KNH', name: '金門尚義機場', city: '金門', coordinate: [118.361, 24.4297] },
+  RCFG: { iata: 'LZN', name: '馬祖南竿機場', city: '馬祖', coordinate: [119.958, 26.1594] },
+  RCFS: { iata: 'MFK', name: '馬祖北竿機場', city: '馬祖', coordinate: [120.003, 26.2239] },
+  RCFN: { iata: 'TTT', name: '台東機場', city: '台東', coordinate: [121.102, 22.7558] },
+  RCKU: { iata: 'CYI', name: '嘉義機場', city: '嘉義', coordinate: [120.393, 23.4619] },
+  RCNN: { iata: 'TNN', name: '台南機場', city: '台南', coordinate: [120.206, 22.9503] },
+  RCKW: { iata: 'HCN', name: '恆春機場', city: '恆春', coordinate: [120.738, 22.0408] },
+  RCPO: { iata: 'HCN', name: '新竹空軍基地', city: '新竹', coordinate: [120.943, 24.8183] },
 
   // Hong Kong & Macau
-  VHHH: { iata: 'HKG', name: '香港國際機場', city: '香港' },
-  VMMC: { iata: 'MFM', name: '澳門國際機場', city: '澳門' },
+  VHHH: { iata: 'HKG', name: '香港國際機場', city: '香港', coordinate: [113.915, 22.3089] },
+  VMMC: { iata: 'MFM', name: '澳門國際機場', city: '澳門', coordinate: [113.592, 22.1496] },
 
   // Japan
-  RJTT: { iata: 'HND', name: '東京羽田國際機場', city: '東京' },
-  RJAA: { iata: 'NRT', name: '東京成田國際機場', city: '東京' },
-  RJBB: { iata: 'KIX', name: '大阪關西國際機場', city: '大阪' },
-  RJOO: { iata: 'ITM', name: '大阪伊丹機場', city: '大阪' },
-  RJGG: { iata: 'NGO', name: '名古屋中部國際機場', city: '名古屋' },
-  RJFF: { iata: 'FUK', name: '福岡機場', city: '福岡' },
-  RJCC: { iata: 'CTS', name: '札幌新千歲機場', city: '札幌' },
-  ROAH: { iata: 'OKA', name: '沖繩那霸機場', city: '沖繩' },
-  ROIG: { iata: 'ISG', name: '石垣機場', city: '石垣島' },
-  RJSS: { iata: 'SDJ', name: '仙台機場', city: '仙台' },
-  RJOT: { iata: 'TAK', name: '高松機場', city: '高松' },
+  RJTT: { iata: 'HND', name: '東京羽田國際機場', city: '東京', coordinate: [139.780, 35.5494] },
+  RJAA: { iata: 'NRT', name: '東京成田國際機場', city: '東京', coordinate: [140.386, 35.7647] },
+  RJBB: { iata: 'KIX', name: '大阪關西國際機場', city: '大阪', coordinate: [135.244, 34.4347] },
+  RJOO: { iata: 'ITM', name: '大阪伊丹機場', city: '大阪', coordinate: [135.438, 34.7855] },
+  RJGG: { iata: 'NGO', name: '名古屋中部國際機場', city: '名古屋', coordinate: [136.805, 34.8584] },
+  RJFF: { iata: 'FUK', name: '福岡機場', city: '福岡', coordinate: [130.450, 33.5859] },
+  RJCC: { iata: 'CTS', name: '札幌新千歲機場', city: '札幌', coordinate: [141.692, 42.7752] },
+  ROAH: { iata: 'OKA', name: '沖繩那霸機場', city: '沖繩', coordinate: [127.646, 26.1958] },
+  ROIG: { iata: 'ISG', name: '石垣機場', city: '石垣島', coordinate: [124.245, 24.3964] },
+  RJSS: { iata: 'SDJ', name: '仙台機場', city: '仙台', coordinate: [140.917, 38.1397] },
+  RJOT: { iata: 'TAK', name: '高松機場', city: '高松', coordinate: [134.015, 34.2142] },
 
   // South Korea
-  RKSI: { iata: 'ICN', name: '首爾仁川國際機場', city: '首爾' },
-  RKSS: { iata: 'GMP', name: '首爾金浦國際機場', city: '首爾' },
-  RKPC: { iata: 'CJU', name: '濟州國際機場', city: '濟州' },
-  RKPK: { iata: 'PUS', name: '釜山金海國際機場', city: '釜山' },
-  RKTU: { iata: 'CJJ', name: '清州國際機場', city: '清州' },
-  RKTN: { iata: 'TAE', name: '大邱國際機場', city: '大邱' },
+  RKSI: { iata: 'ICN', name: '首爾仁川國際機場', city: '首爾', coordinate: [126.451, 37.4602] },
+  RKSS: { iata: 'GMP', name: '首爾金浦國際機場', city: '首爾', coordinate: [126.797, 37.5583] },
+  RKPC: { iata: 'CJU', name: '濟州國際機場', city: '濟州', coordinate: [126.493, 33.5113] },
+  RKPK: { iata: 'PUS', name: '釜山金海國際機場', city: '釜山', coordinate: [128.938, 35.1795] },
+  RKTU: { iata: 'CJJ', name: '清州國際機場', city: '清州', coordinate: [127.499, 36.7166] },
+  RKTN: { iata: 'TAE', name: '大邱國際機場', city: '大邱', coordinate: [128.659, 35.8941] },
 
   // Southeast Asia
-  WSSS: { iata: 'SIN', name: '新加坡樟宜機場', city: '新加坡' },
-  WMKK: { iata: 'KUL', name: '吉隆坡國際機場', city: '吉隆坡' },
-  VTBS: { iata: 'BKK', name: '曼谷素萬那普機場', city: '曼谷' },
-  VTBD: { iata: 'DMK', name: '曼谷廊曼機場', city: '曼谷' },
-  VTSP: { iata: 'HKT', name: '普吉國際機場', city: '普吉' },
-  VVNB: { iata: 'HAN', name: '河內內排國際機場', city: '河內' },
-  VVTS: { iata: 'SGN', name: '胡志明市新山一機場', city: '胡志明市' },
-  VVDN: { iata: 'DAD', name: '峴港國際機場', city: '峴港' },
-  RPLL: { iata: 'MNL', name: '馬尼拉國際機場', city: '馬尼拉' },
-  RPLC: { iata: 'CRK', name: '克拉克國際機場', city: '克拉克' },
-  RPMD: { iata: 'DVO', name: '達沃國際機場', city: '達沃' },
+  WSSS: { iata: 'SIN', name: '新加坡樟宜機場', city: '新加坡', coordinate: [103.991, 1.3644] },
+  WMKK: { iata: 'KUL', name: '吉隆坡國際機場', city: '吉隆坡', coordinate: [101.710, 2.7456] },
+  VTBS: { iata: 'BKK', name: '曼谷素萬那普機場', city: '曼谷', coordinate: [100.750, 13.6900] },
+  VTBD: { iata: 'DMK', name: '曼谷廊曼機場', city: '曼谷', coordinate: [100.607, 13.9126] },
+  VTSP: { iata: 'HKT', name: '普吉國際機場', city: '普吉', coordinate: [98.3064, 8.1132] },
+  VVNB: { iata: 'HAN', name: '河內內排國際機場', city: '河內', coordinate: [105.807, 21.2212] },
+  VVTS: { iata: 'SGN', name: '胡志明市新山一機場', city: '胡志明市', coordinate: [106.652, 10.8188] },
+  VVDN: { iata: 'DAD', name: '峴港國際機場', city: '峴港', coordinate: [108.199, 16.0439] },
+  RPLL: { iata: 'MNL', name: '馬尼拉國際機場', city: '馬尼拉', coordinate: [121.019, 14.5086] },
+  RPLC: { iata: 'CRK', name: '克拉克國際機場', city: '克拉克', coordinate: [120.560, 15.1860] },
+  RPMD: { iata: 'DVO', name: '達沃國際機場', city: '達沃', coordinate: [125.646, 7.1253] },
 
   // Mainland China
-  ZSPD: { iata: 'PVG', name: '上海浦東國際機場', city: '上海' },
-  ZSSS: { iata: 'SHA', name: '上海虹橋國際機場', city: '上海' },
-  ZBAA: { iata: 'PEK', name: '北京首都國際機場', city: '北京' },
-  ZBAD: { iata: 'PKX', name: '北京大興國際機場', city: '北京' },
-  ZGGG: { iata: 'CAN', name: '廣州白雲國際機場', city: '廣州' },
-  ZGSZ: { iata: 'SZX', name: '深圳寶安國際機場', city: '深圳' },
-  ZSAM: { iata: 'XMN', name: '廈門高崎國際機場', city: '廈門' },
-  ZSFT: { iata: 'FOC', name: '福州長樂國際機場', city: '福州' },
-  ZUUU: { iata: 'CTU', name: '成都雙流國際機場', city: '成都' },
-  ZUCK: { iata: 'CKG', name: '重慶江北國際機場', city: '重慶' },
-  ZHHH: { iata: 'WUH', name: '武漢天河國際機場', city: '武漢' },
-  ZSHC: { iata: 'HGH', name: '杭州蕭山國際機場', city: '杭州' },
+  ZSPD: { iata: 'PVG', name: '上海浦東國際機場', city: '上海', coordinate: [121.805, 31.1443] },
+  ZSSS: { iata: 'SHA', name: '上海虹橋國際機場', city: '上海', coordinate: [121.336, 31.1979] },
+  ZBAA: { iata: 'PEK', name: '北京首都國際機場', city: '北京', coordinate: [116.597, 40.0799] },
+  ZBAD: { iata: 'PKX', name: '北京大興國際機場', city: '北京', coordinate: [116.410, 39.5098] },
+  ZGGG: { iata: 'CAN', name: '廣州白雲國際機場', city: '廣州', coordinate: [113.299, 23.3924] },
+  ZGSZ: { iata: 'SZX', name: '深圳寶安國際機場', city: '深圳', coordinate: [113.811, 22.6393] },
+  ZSAM: { iata: 'XMN', name: '廈門高崎國際機場', city: '廈門', coordinate: [118.128, 24.5440] },
+  ZSFT: { iata: 'FOC', name: '福州長樂國際機場', city: '福州', coordinate: [119.663, 25.9351] },
+  ZUUU: { iata: 'CTU', name: '成都雙流國際機場', city: '成都', coordinate: [103.947, 30.5785] },
+  ZUCK: { iata: 'CKG', name: '重慶江北國際機場', city: '重慶', coordinate: [106.642, 29.7192] },
+  ZHHH: { iata: 'WUH', name: '武漢天河國際機場', city: '武漢', coordinate: [114.208, 30.7838] },
+  ZSHC: { iata: 'HGH', name: '杭州蕭山國際機場', city: '杭州', coordinate: [120.434, 30.2295] },
 
   // Long Haul / America / Europe / Oceania / Middle East
-  KLAX: { iata: 'LAX', name: '洛杉磯國際機場', city: '洛杉磯' },
-  KSFO: { iata: 'SFO', name: '舊金山國際機場', city: '舊金山' },
-  KJFK: { iata: 'JFK', name: '紐約甘迺迪國際機場', city: '紐約' },
-  KSEA: { iata: 'SEA', name: '西雅圖國際機場', city: '西雅圖' },
-  KORD: { iata: 'ORD', name: '芝加哥歐哈爾機場', city: '芝加哥' },
-  PHNL: { iata: 'HNL', name: '檀香山國際機場', city: '夏威夷' },
-  CYVR: { iata: 'YVR', name: '溫哥華國際機場', city: '溫哥華' },
-  CYYZ: { iata: 'YYZ', name: '多倫多皮爾遜機場', city: '多倫多' },
-  EGLL: { iata: 'LHR', name: '倫敦希斯洛機場', city: '倫敦' },
-  LFPG: { iata: 'CDG', name: '巴黎戴高樂機場', city: '巴黎' },
-  EDDF: { iata: 'FRA', name: '法蘭克福機場', city: '法蘭克福' },
-  EHAM: { iata: 'AMS', name: '阿姆斯特丹史基浦機場', city: '阿姆斯特丹' },
-  OMDB: { iata: 'DXB', name: '杜拜國際機場', city: '杜拜' },
-  OTHH: { iata: 'DOH', name: '杜哈哈馬德機場', city: '杜哈' },
-  YSSY: { iata: 'SYD', name: '雪梨國際機場', city: '雪梨' },
-  YMML: { iata: 'MEL', name: '墨爾本機場', city: '墨爾本' },
-  YBBN: { iata: 'BNE', name: '布里斯本機場', city: '布里斯本' },
-  NZAA: { iata: 'AKL', name: '奧克蘭國際機場', city: '奧克蘭' },
+  KLAX: { iata: 'LAX', name: '洛杉磯國際機場', city: '洛杉磯', coordinate: [-118.408, 33.9416] },
+  KSFO: { iata: 'SFO', name: '舊金山國際機場', city: '舊金山', coordinate: [-122.375, 37.6188] },
+  KJFK: { iata: 'JFK', name: '紐約甘迺迪國際機場', city: '紐約', coordinate: [-73.7781, 40.6413] },
+  KSEA: { iata: 'SEA', name: '西雅圖國際機場', city: '西雅圖', coordinate: [-122.309, 47.4502] },
+  KORD: { iata: 'ORD', name: '芝加哥歐哈爾機場', city: '芝加哥', coordinate: [-87.9073, 41.9742] },
+  PHNL: { iata: 'HNL', name: '檀香山國際機場', city: '夏威夷', coordinate: [-157.922, 21.3187] },
+  CYVR: { iata: 'YVR', name: '溫哥華國際機場', city: '溫哥華', coordinate: [-123.184, 49.1967] },
+  CYYZ: { iata: 'YYZ', name: '多倫多皮爾遜機場', city: '多倫多', coordinate: [-79.6248, 43.6777] },
+  EGLL: { iata: 'LHR', name: '倫敦希斯洛機場', city: '倫敦', coordinate: [-0.4543, 51.4700] },
+  LFPG: { iata: 'CDG', name: '巴黎戴高樂機場', city: '巴黎', coordinate: [2.5500, 49.0097] },
+  EDDF: { iata: 'FRA', name: '法蘭克福機場', city: '法蘭克福', coordinate: [8.5706, 50.0379] },
+  EHAM: { iata: 'AMS', name: '阿姆斯特丹史基浦機場', city: '阿姆斯特丹', coordinate: [4.7639, 52.3105] },
+  OMDB: { iata: 'DXB', name: '杜拜國際機場', city: '杜拜', coordinate: [55.3644, 25.2532] },
+  OTHH: { iata: 'DOH', name: '杜哈哈馬德機場', city: '杜哈', coordinate: [51.6081, 25.2731] },
+  YSSY: { iata: 'SYD', name: '雪梨國際機場', city: '雪梨', coordinate: [151.1772, -33.9461] },
+  YMML: { iata: 'MEL', name: '墨爾本機場', city: '墨爾本', coordinate: [144.8433, -37.6733] },
+  YBBN: { iata: 'BNE', name: '布里斯本機場', city: '布里斯本', coordinate: [153.1175, -27.3842] },
+  NZAA: { iata: 'AKL', name: '奧克蘭國際機場', city: '奧克蘭', coordinate: [174.7922, -37.0082] },
 }
 
 class FlightInfoService {
@@ -251,39 +253,56 @@ class FlightInfoService {
     }
 
     const task = (async (): Promise<RouteInfo | null> => {
+      // 1. Primary Query: hexdb.io
       try {
-        const res = await fetch(`/api/hexdb/route/icao/${clean}`)
-        if (!res.ok) {
-          this.routeCache.set(clean, null)
-          return null
+        const res = await fetch(apiUrl(`/api/hexdb/route/icao/${clean}`))
+        if (res.ok) {
+          const data = await res.json()
+          const rawRoute: string = data.route || ''
+          if (rawRoute && rawRoute.includes('-')) {
+            const [origIcao, destIcao] = rawRoute.split('-').map((s) => s.trim().toUpperCase())
+            const origin = await this.resolveAirport(origIcao)
+            const destination = await this.resolveAirport(destIcao)
+            const result: RouteInfo = { origin, destination, rawRoute }
+            this.routeCache.set(clean, result)
+            return result
+          }
         }
-
-        const data = await res.json()
-        const rawRoute: string = data.route || ''
-        if (!rawRoute || !rawRoute.includes('-')) {
-          this.routeCache.set(clean, null)
-          return null
-        }
-
-        const [origIcao, destIcao] = rawRoute.split('-').map((s) => s.trim().toUpperCase())
-        const origin = await this.resolveAirport(origIcao)
-        const destination = await this.resolveAirport(destIcao)
-
-        const result: RouteInfo = {
-          origin,
-          destination,
-          rawRoute,
-        }
-
-        this.routeCache.set(clean, result)
-        return result
       } catch {
-        this.routeCache.set(clean, null)
-        return null
-      } finally {
-        this.inFlightRoutes.delete(clean)
+        // Fall through to secondary
       }
-    })()
+
+      // 2. Secondary Fallback Query: adsbdb.com
+      try {
+        const res = await fetch(apiUrl(`/api/adsbdb/callsign/${clean}`))
+        if (res.ok) {
+          const data = await res.json()
+          const flightObj = data.response?.flightroute
+          if (flightObj) {
+            const origIcao = flightObj.origin?.icao_code
+            const destIcao = flightObj.destination?.icao_code
+            if (origIcao && destIcao) {
+              const origin = await this.resolveAirport(origIcao)
+              const destination = await this.resolveAirport(destIcao)
+              const result: RouteInfo = {
+                origin,
+                destination,
+                rawRoute: `${origIcao}-${destIcao}`,
+              }
+              this.routeCache.set(clean, result)
+              return result
+            }
+          }
+        }
+      } catch {
+        // Ignore fallback error
+      }
+
+      this.routeCache.set(clean, null)
+      return null
+    })().finally(() => {
+      this.inFlightRoutes.delete(clean)
+    })
 
     this.inFlightRoutes.set(clean, task)
     return task
@@ -305,7 +324,7 @@ class FlightInfoService {
 
     const task = (async (): Promise<AircraftDetails | null> => {
       try {
-        const res = await fetch(`/api/hexdb/aircraft/${clean}`)
+        const res = await fetch(apiUrl(`/api/hexdb/aircraft/${clean}`))
         if (!res.ok) {
           this.aircraftCache.set(clean, null)
           return null
@@ -344,6 +363,7 @@ class FlightInfoService {
         iata: info.iata,
         name: info.name,
         city: info.city,
+        coordinate: info.coordinate,
       }
     }
 
@@ -353,14 +373,17 @@ class FlightInfoService {
 
     // Fallback: Query hexdb airport database
     try {
-      const res = await fetch(`/api/hexdb/airport/icao/${clean}`)
+      const res = await fetch(apiUrl(`/api/hexdb/airport/icao/${clean}`))
       if (res.ok) {
         const data = await res.json()
+        const lat = data.lat !== undefined ? Number(data.lat) : undefined
+        const lon = data.lon !== undefined ? Number(data.lon) : undefined
         const info: AirportInfo = {
           icao: clean,
           iata: data.iata || clean,
           name: data.airport || clean,
           city: data.region_name || data.country_code || '',
+          coordinate: lat !== undefined && lon !== undefined && !isNaN(lat) && !isNaN(lon) ? [lon, lat] : undefined,
         }
         this.airportCache.set(clean, info)
         return info

@@ -15,6 +15,11 @@ const emit = defineEmits<{
 }>()
 
 const showAttitude = ref(false)
+const isCollapsed = ref(true)
+
+function toggleCollapse() {
+  isCollapsed.value = !isCollapsed.value
+}
 
 const isAltitudeLegal = computed(() => {
   const maxLegal = props.drone?.maxLegalAltitudeMeters || (props.drone?.airspaceZone === 'yellow' ? 60 : 120)
@@ -89,17 +94,54 @@ const compassDirection = computed(() => {
           </div>
         </div>
 
-        <button
-          class="btn btn-sm btn-circle btn-ghost text-white/80 hover:text-white hover:bg-white/20 z-10 shrink-0 ml-1"
-          title="關閉"
-          @click="emit('close')"
-        >
-          <MaterialIcon name="close" :size="18" />
-        </button>
+        <div class="flex items-center gap-0.5 z-10 shrink-0 ml-1">
+          <button
+            class="btn btn-sm btn-circle btn-ghost text-white/80 hover:text-white hover:bg-white/20"
+            :title="isCollapsed ? '展開詳細儀表資訊' : '縮小為精簡狀態列'"
+            @click="toggleCollapse"
+          >
+            <MaterialIcon :name="isCollapsed ? 'expand_more' : 'expand_less'" :size="18" />
+          </button>
+          <button
+            class="btn btn-sm btn-circle btn-ghost text-white/80 hover:text-white hover:bg-white/20"
+            title="關閉"
+            @click="emit('close')"
+          >
+            <MaterialIcon name="close" :size="18" />
+          </button>
+        </div>
       </div>
 
-      <!-- Mission Banner & Attitude Display Toggle -->
-      <div class="px-3.5 py-2 bg-slate-800/80 border-b border-slate-700/60 flex items-center justify-between text-xs gap-2">
+      <!-- Compact Mode Bar (Shown only when collapsed): Minimal footprint so map is not obscured -->
+      <div
+        v-if="isCollapsed"
+        class="px-3 py-1.5 bg-slate-900/90 flex items-center justify-between text-xs font-mono text-slate-300 border-t border-cyan-500/20 cursor-pointer hover:bg-slate-800/80 transition-colors"
+        @click="toggleCollapse"
+      >
+        <div class="flex items-center gap-3">
+          <span class="flex items-center gap-1">
+            <span class="text-cyan-400 font-bold">ALT</span>
+            <span class="text-white">{{ drone.altitudeAglMeters }}m</span>
+          </span>
+          <span class="flex items-center gap-1">
+            <span class="text-amber-400 font-bold">SPD</span>
+            <span class="text-white">{{ drone.speedKmh }}km/h</span>
+          </span>
+          <span class="flex items-center gap-1">
+            <span class="text-emerald-400 font-bold">BAT</span>
+            <span :class="batteryColor">{{ drone.batteryPercent }}%</span>
+          </span>
+        </div>
+        <div class="flex items-center gap-1 text-[11px] text-cyan-400/80">
+          <span>展開</span>
+          <MaterialIcon name="unfold_more" :size="14" />
+        </div>
+      </div>
+
+      <!-- Full Body: Collapsible container -->
+      <div v-show="!isCollapsed">
+        <!-- Mission Banner & Attitude Display Toggle -->
+        <div class="px-3.5 py-2 bg-slate-800/80 border-b border-slate-700/60 flex items-center justify-between text-xs gap-2">
         <div class="flex items-center gap-1.5 min-w-0 flex-1">
           <MaterialIcon name="assignment" :size="16" class="text-cyan-400 shrink-0" />
           <span class="text-slate-300 font-medium truncate" :title="drone.missionType">{{ drone.missionType }}</span>
@@ -300,6 +342,7 @@ const compassDirection = computed(() => {
             <span>{{ isFollowing ? '無人機視角鎖定中（點擊解除）' : '鎖定鏡頭跟隨無人機' }}</span>
           </button>
         </div>
+      </div>
       </div>
     </div>
   </div>

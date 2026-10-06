@@ -154,20 +154,9 @@ export function createDroneStyle(
 
   // 2. Drone Icon with non-overlapping label below
   let textStyle: Text | undefined = undefined
-  if (label) {
-    if (isSelected) {
-      textStyle = new Text({
-        text: label,
-        textBaseline: 'top',
-        offsetY: 36,
-        font: 'bold 11px system-ui, sans-serif',
-        fill: new Fill({ color: '#ffffff' }),
-        stroke: new Stroke({ color: '#0f172a', width: 3.5 }),
-        backgroundFill: new Fill({ color: 'rgba(14, 165, 233, 0.92)' }),
-        backgroundStroke: new Stroke({ color: '#ffffff', width: 1 }),
-        padding: [2, 6, 2, 6],
-      })
-    } else if (isHovered) {
+  // When drone is selected, the floating HUD detail card is displayed; hide bottom label to prevent overlap
+  if (label && !isSelected) {
+    if (isHovered) {
       textStyle = new Text({
         text: label,
         textBaseline: 'top',

@@ -1,0 +1,7 @@
+name = "utm-api-proxy"
+main = "src/index.js"
+compatibility_date = "2026-10-01"
+
+[vars]
+# Front-end origins allowed to call this proxy (comma separated)
+ALLOWED_ORIGINS = "https://sungjunghung.github.io,http://localhost:5173,http://localhost:4173"

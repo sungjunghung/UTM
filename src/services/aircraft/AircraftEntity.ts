@@ -1,7 +1,9 @@
 import Feature from 'ol/Feature'
 import Point from 'ol/geom/Point'
 import LineString from 'ol/geom/LineString'
+import MultiLineString from 'ol/geom/MultiLineString'
 import { fromLonLat } from 'ol/proj'
+import type { Coordinate } from 'ol/coordinate'
 import { Stroke, Style } from 'ol/style'
 import { createAircraftStyle, getAltitudeColor } from './aircraftIcons'
 import type { AircraftInfo, RawAircraftData } from './types'
@@ -47,7 +49,7 @@ export class AircraftEntity {
   // OpenLayers Features
   private planeFeature: Feature<Point>
   private trailFeature: Feature<LineString>
-  private projectionFeature: Feature<LineString>
+  private projectionFeature: Feature<MultiLineString>
 
   private isSelected: boolean = false
   private isHovered: boolean = false
@@ -93,7 +95,7 @@ export class AircraftEntity {
     })
 
     this.projectionFeature = new Feature({
-      geometry: new LineString([projCoord, projCoord]),
+      geometry: new MultiLineString([]),
       hex: this.hex,
     })
 
@@ -110,7 +112,7 @@ export class AircraftEntity {
     return this.trailFeature
   }
 
-  public getProjectionFeature(): Feature<LineString> {
+  public getProjectionFeature(): Feature<MultiLineString> {
     return this.projectionFeature
   }
 
@@ -357,8 +359,8 @@ export class AircraftEntity {
   }
 
   /**
-   * Compute forward projected heading vector (Ahead route line)
-   * Projects 25 nautical miles forward along heading
+   * Compute tactical forward velocity vector (60 seconds short-term trend)
+   * Divided into 12 sub-segments with smoothly decaying opacity (True Gradient Fade-Out)
    */
   private updateProjectionVector(): void {
     const geom = this.projectionFeature.getGeometry()
@@ -369,26 +371,69 @@ export class AircraftEntity {
       return
     }
 
-    // Project 25 nautical miles (~46.3 km) in the direction of flight
-    const aheadMeters = 46300
+    // 60-second forward projection distance based on actual airspeed (meters)
+    // Cruise: ~7-8km; Approach: ~4-5km
+    const forwardMps = this.speed * 0.514444
+    const totalDistMeters = Math.max(2500, forwardMps * 60)
+
     const rad = (this.currentHeading * Math.PI) / 180
-    const dLat = (aheadMeters * Math.cos(rad)) / 111320
-    const latRad = (this.currentLonLat[1] * Math.PI) / 180
-    const dLon = (aheadMeters * Math.sin(rad)) / (111320 * Math.max(Math.cos(latRad), 0.1))
+    const sinH = Math.sin(rad)
+    const cosH = Math.cos(rad)
 
-    const pStart = fromLonLat(this.currentLonLat)
-    const pEnd = fromLonLat([this.currentLonLat[0] + dLon, this.currentLonLat[1] + dLat])
+    const NUM_SEGMENTS = 12
+    const multiLineCoords: Coordinate[][] = []
+    const styles: Style[] = []
 
-    geom.setCoordinates([pStart, pEnd])
+    const startLon = this.currentLonLat[0]
+    const startLat = this.currentLonLat[1]
+    const latRad = (startLat * Math.PI) / 180
+    const mPerDegLat = 111320
+    const mPerDegLon = 111320 * Math.max(Math.cos(latRad), 0.1)
 
-    this.projectionFeature.setStyle(
-      new Style({
-        stroke: new Stroke({
-          color: '#38bdf8',
-          width: 2.5,
-          lineDash: [8, 6],
+    for (let i = 0; i < NUM_SEGMENTS; i++) {
+      const fracStart = i / NUM_SEGMENTS
+      const fracEnd = (i + 1) / NUM_SEGMENTS
+
+      const d1 = totalDistMeters * fracStart
+      const d2 = totalDistMeters * fracEnd
+
+      const lon1 = startLon + (d1 * sinH) / mPerDegLon
+      const lat1 = startLat + (d1 * cosH) / mPerDegLat
+      const lon2 = startLon + (d2 * sinH) / mPerDegLon
+      const lat2 = startLat + (d2 * cosH) / mPerDegLat
+
+      const p1 = fromLonLat([lon1, lat1])
+      const p2 = fromLonLat([lon2, lat2])
+
+      multiLineCoords.push([p1, p2])
+
+      // Opacity decays smoothly along progress: 0.95 -> 0.05
+      const progress = (i + 0.5) / NUM_SEGMENTS
+      const alpha = Math.max(0.03, Math.pow(1 - progress, 1.4) * 0.95)
+      const glowAlpha = alpha * 0.35
+
+      // Sub-segment line style
+      styles.push(
+        new Style({
+          geometry: new LineString([p1, p2]),
+          stroke: new Stroke({
+            color: `rgba(56, 189, 248, ${alpha.toFixed(3)})`,
+            width: Math.max(1.5, 3.2 - progress * 1.5),
+          }),
+          zIndex: 25,
         }),
-      })
-    )
+        new Style({
+          geometry: new LineString([p1, p2]),
+          stroke: new Stroke({
+            color: `rgba(56, 189, 248, ${glowAlpha.toFixed(3)})`,
+            width: Math.max(3, 7 - progress * 4),
+          }),
+          zIndex: 24,
+        })
+      )
+    }
+
+    geom.setCoordinates(multiLineCoords)
+    this.projectionFeature.setStyle(styles)
   }
 }
