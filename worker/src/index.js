@@ -22,6 +22,8 @@ const ROUTES = [
     ttl: 3,
     staleTtl: 120,
     headers: { 'User-Agent': 'UTM-FlightRadar/1.0', Accept: 'application/json' },
+    // adsb.lol rate-limits (429) Cloudflare's shared egress IPs; fall back to adsb.fi (same readsb data)
+    fallback: adsbFiFallback,
   },
   {
     prefix: '/api/caa',
@@ -86,16 +88,24 @@ export default {
     }
 
     try {
+      let body = null
+      let status = 0
       const upstreamRes = await fetch(upstreamUrl, { headers: route.headers })
-      if (!upstreamRes.ok) {
-        if (cached) return withHeaders(cached, clientHeaders('STALE'))
-        return json({ error: `Upstream returned ${upstreamRes.status}`, ac: [] }, 502, cors)
+      status = upstreamRes.status
+      if (upstreamRes.ok) {
+        body = await upstreamRes.text()
+      } else if (route.fallback) {
+        body = await route.fallback(url.pathname.slice(route.prefix.length)).catch(() => null)
       }
 
-      const body = await upstreamRes.text()
+      if (body === null) {
+        if (cached) return withHeaders(cached, clientHeaders('STALE'))
+        return json({ error: `Upstream returned ${status}`, ac: [] }, 502, cors)
+      }
+
       const fresh = new Response(body, {
         headers: {
-          'Content-Type': upstreamRes.headers.get('Content-Type') || 'application/json',
+          'Content-Type': 'application/json',
           'Cache-Control': `public, max-age=${route.staleTtl}`,
           'X-Fetched-At': String(Date.now()),
         },
@@ -107,6 +117,22 @@ export default {
       return json({ error: err?.message || 'Fetch failed', ac: [] }, 502, cors)
     }
   },
+}
+
+/**
+ * adsb.lol path /v2/point/{lat}/{lon}/{radiusNm} → adsb.fi /api/v2/lat/{lat}/lon/{lon}/dist/{radiusNm},
+ * reshaped to adsb.lol's { ac, now, total } so the front-end needs no changes. Returns null if unsupported/failed.
+ */
+async function adsbFiFallback(path) {
+  const m = path.match(/^\/v2\/point\/(-?[\d.]+)\/(-?[\d.]+)\/([\d.]+)$/)
+  if (!m) return null
+  const res = await fetch(`https://opendata.adsb.fi/api/v2/lat/${m[1]}/lon/${m[2]}/dist/${m[3]}`, {
+    headers: { 'User-Agent': 'UTM-FlightRadar/1.0', Accept: 'application/json' },
+  })
+  if (!res.ok) return null
+  const data = await res.json()
+  const ac = data.aircraft || data.ac || []
+  return JSON.stringify({ ac, now: data.now, total: ac.length, source: 'adsb.fi' })
 }
 
 function withHeaders(res, extra) {

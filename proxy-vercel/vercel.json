@@ -1,0 +1,4 @@
+{
+  "regions": ["hkg1"],
+  "rewrites": [{ "source": "/api/adsb/:path*", "destination": "/api/adsb?p=:path*" }]
+}

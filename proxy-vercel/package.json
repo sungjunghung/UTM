@@ -1,0 +1,5 @@
+{
+  "name": "utm-adsb-proxy",
+  "private": true,
+  "type": "module"
+}

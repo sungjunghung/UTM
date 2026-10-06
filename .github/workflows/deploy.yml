@@ -33,6 +33,7 @@ jobs:
         env:
           VITE_CARTO_API_KEY: ${{ secrets.VITE_CARTO_API_KEY }}
           VITE_API_BASE: ${{ vars.VITE_API_BASE }}
+          VITE_ADSB_API_BASE: ${{ vars.VITE_ADSB_API_BASE }}
 
       - uses: actions/upload-pages-artifact@v3
         with:

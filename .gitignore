@@ -26,3 +26,4 @@ dist-ssr
 # Local tooling output
 .playwright-mcp
 worker/.wrangler
+proxy-vercel/.vercel
